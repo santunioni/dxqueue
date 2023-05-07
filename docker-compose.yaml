@@ -8,5 +8,7 @@ services:
     image: localstack/localstack:1.4
     ports:
       - '4566:4566'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/health']
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
