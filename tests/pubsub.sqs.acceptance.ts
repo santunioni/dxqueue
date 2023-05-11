@@ -1,4 +1,4 @@
-import { getConsumersFromInstance, Looper, Queue } from '../src'
+import { getConsumersFromInstance, Looper, Queue } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
 
 const sqsConfig = {

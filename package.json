@@ -1,6 +1,6 @@
 {
   "name": "dxqueue",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Improve developer experience using the remote command pattern",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,7 +18,12 @@
     }
   ],
   "scripts": {
-    "test": "docker-compose up --wait -d && jest .",
+    "build": "tsc",
+    "local": "prettier --write . && npm run test:unit && npm run test:acceptance",
+    "infra:up": "docker-compose up --wait -d",
+    "infra:down": "docker-compose down",
+    "test:unit": "jest . --testRegex \".unit.ts$\"",
+    "test:acceptance": "npm run build && jest . --testRegex \".acceptance.ts$\"",
     "prepare": "husky install",
     "prepublish": "tsc"
   },

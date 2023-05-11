@@ -28,7 +28,8 @@ jobs:
           npm install
           npx prettier --check .
           npx tsc --noEmit
-          npx jest .
+          npm run test:unit
+          npm run test:acceptance
         name: Checks
 
       - run: npm ci
