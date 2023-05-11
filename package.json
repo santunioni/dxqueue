@@ -1,13 +1,26 @@
 {
   "name": "dxqueue",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Improve developer experience using the remote command pattern",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": "https://github.com/santunioni/dxqueue",
   "readme": "README.md",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "tag": "latest"
+  },
+  "maintainers": [
+    {
+      "name": "Vinícius Vargas",
+      "email": "santunionivinicius@gmail.com"
+    }
+  ],
   "scripts": {
     "test": "docker-compose up --wait -d && jest .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "prepublish": "tsc"
   },
   "author": "Vinícius Vargas <santunionivinicius@gmail.com>",
   "license": "ISC",

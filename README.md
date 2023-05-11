@@ -11,15 +11,17 @@ If the consumer code and producer code are within the same bounded context, keep
 Check [this video](https://www.youtube.com/watch?v=BFcxgcoO5Ns) from CodeOpinion to understand the differences
 between physical and logical boundaries.
 
-## Installation
+This is really useful for implementing the Remote Command pattern.
 
-### Framework
+## Usage
+
+### Installation
+
+Install the framework
 
 ```bash
 npm install dxqueue
 ```
-
-### Backend
 
 Install your backend of choice. Currently only SQS is supported.
 
@@ -27,7 +29,7 @@ Install your backend of choice. Currently only SQS is supported.
 npm install @aws-sdk/client-sqs
 ```
 
-## Usage
+### Decorate your domain class methods that should get delayed by the queue
 
 ```typescript
 // file: domain.ts
@@ -64,6 +66,10 @@ export class Domain {
 }
 ```
 
+### Call the method from the client
+
+Your method calls will be replaced by a publish to the queue.
+
 ```typescript
 // file: client.ts
 
@@ -72,6 +78,10 @@ import { Domain } from './domain'
 const domain = new Domain('http://localhost:4566/000000000000/my-queue')
 await domain.doSomething('my', 1) // <-- This will publish to the Queue instead of calling the method directly
 ```
+
+### Create a worker
+
+The worker will consume the queue to call the original method.
 
 ```typescript
 // file: worker.ts
