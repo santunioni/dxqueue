@@ -1,20 +1,11 @@
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  publish:
+  checks:
     runs-on: ubuntu-latest
-
-    services:
-      localstack:
-        env:
-          DEBUG: 1
-          DOCKER_HOST: unix:///var/run/docker.sock
-        image: localstack/localstack:1.4
-        ports:
-          - '4566:4566'
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
 
     steps:
       - uses: actions/checkout@v3
@@ -29,13 +20,53 @@ jobs:
           npx prettier --check .
           npx tsc --noEmit
           npm run test:unit
+        name: Checks
+
+      - run: |
+          EXISTS=$(npm view dxqueue versions --json | jq "any(index($(cat package.json | jq '.version')))")
+          echo "EXISTS=$EXISTS" >> $GITHUB_OUTPUT
+          if [ "$EXISTS" = "true" ]; then
+            echo "Version $(cat package.json | jq '.version') already exists. Skipping publish."
+          fi
+        id: version
+        name: Version
+
+    outputs:
+      VERSION_EXISTS: ${{ steps.version.outputs.VERSION_EXISTS }}
+
+  publish:
+    services:
+      localstack:
+        env:
+          DEBUG: 1
+          DOCKER_HOST: unix:///var/run/docker.sock
+        image: localstack/localstack:1.4
+        ports:
+          - '4566:4566'
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
+    needs: checks
+
+    if: needs.checks.outputs.VERSION_EXISTS == 'false'
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: |
+          npm install
           npm run test:acceptance
         name: Checks
 
-      - run: npm ci
-        name: Clear dependencies
-
-      - run: npm publish
+      - run: |
+          npm ci
+          npm publish
         name: Publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

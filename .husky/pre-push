@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npx prettier --check . && npx tsc --noEmit && npm run local
+npx prettier --check . && npx tsc --noEmit && npm run test:unit
