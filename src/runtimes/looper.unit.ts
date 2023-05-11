@@ -14,7 +14,7 @@ describe('Looper', () => {
     const abortController = new AbortController()
 
     // When: subscriber start looping
-    const loop = looper.startLoop(abortController.signal)
+    const loop = looper.start(abortController.signal)
     sleep(10).then(() => abortController.abort())
 
     // Then: subscriber stop polling only after it is stopped

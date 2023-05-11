@@ -3,7 +3,7 @@ import { Consumer } from '../interfaces'
 export class Looper {
   constructor(private readonly consumer: Consumer) {}
 
-  async startLoop(signal?: AbortSignal) {
+  async start(signal?: AbortSignal) {
     let shouldContinue = true
     signal?.addEventListener('abort', () => {
       shouldContinue = false

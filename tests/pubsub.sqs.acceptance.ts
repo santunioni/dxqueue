@@ -70,7 +70,7 @@ describe('DXQueue', () => {
     setTimeout(() => abortController.abort(), 100)
 
     const loops = getConsumersFromInstance(domain).map((consumer) =>
-      new Looper(consumer).startLoop(abortController.signal),
+      new Looper(consumer).start(abortController.signal),
     )
     await Promise.all(loops)
 
