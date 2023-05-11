@@ -4,6 +4,7 @@
   "description": "Improve developer experience using the remote command pattern",
   "main": "src/index.ts",
   "repository": "https://github.com/santunioni/dxqueue",
+  "readme": "README.md",
   "scripts": {
     "test": "docker-compose up --wait -d && jest .",
     "prepare": "husky install"
