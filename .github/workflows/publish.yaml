@@ -32,7 +32,7 @@ jobs:
         name: Version
 
     outputs:
-      VERSION_EXISTS: ${{ steps.version.outputs.VERSION_EXISTS }}
+      VERSION_EXISTS: ${{ steps.version.outputs.EXISTS }}
 
   publish:
     services:
