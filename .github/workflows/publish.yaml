@@ -4,6 +4,18 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    services:
+      localstack:
+        env:
+          DEBUG: 1
+          DOCKER_HOST: unix:///var/run/docker.sock
+        image: localstack/localstack:1.4
+        ports:
+          - '4566:4566'
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
     steps:
       - uses: actions/checkout@v3
 
@@ -16,7 +28,7 @@ jobs:
           npm install
           npx prettier --check .
           npx tsc --noEmit
-          npm run test
+          npx jest .
         name: Checks
 
       - run: npm ci
