@@ -53,7 +53,6 @@ export function createProducer<P extends any[]>(
     return new SqsProducer(
       parsedConfig.logger,
       parsedConfig.encode,
-      parsedConfig.getGroupId,
       config.backend,
     )
   }

@@ -17,7 +17,7 @@ import { defaultGetGroupId, hashCode } from '../initialization/defaults'
 import { SQSBackendConfig } from './sqs.config'
 
 export class SqsConsumer implements Consumer {
-  private readonly sqs = new SQS(this.backendConfig.config ?? {})
+  private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
 
   private readonly isFifo: boolean
   private readonly batchProcessor: BatchProcessor
@@ -25,7 +25,7 @@ export class SqsConsumer implements Consumer {
   constructor(
     processPayload: (payload: string) => Promise<void>,
     private readonly logger: Logger,
-    private readonly backendConfig: SQSBackendConfig,
+    private readonly backendConfig: SQSBackendConfig<any>,
   ) {
     this.isFifo = backendConfig.url.endsWith('.fifo')
     this.batchProcessor = this.isFifo
@@ -107,16 +107,17 @@ class DXQueueMessageSQSWrapper implements DXQueueMessage {
 }
 
 export class SqsProducer<P extends any[]> implements Publisher<P> {
-  private readonly sqs = new SQS(this.backendConfig.config ?? {})
+  private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
 
   private readonly isFifo: boolean
+  private readonly getGroupId: (...params: P) => string
 
   constructor(
     private readonly logger: Logger,
     private readonly encoder: (params: P) => string,
-    private readonly getGroupId: (...params: P) => string,
-    private readonly backendConfig: SQSBackendConfig,
+    private readonly backendConfig: SQSBackendConfig<P>,
   ) {
+    this.getGroupId = backendConfig.getGroupId ?? defaultGetGroupId
     this.isFifo = backendConfig.url.endsWith('.fifo')
     if (this.isFifo && this.getGroupId === defaultGetGroupId) {
       this.logger.warn(

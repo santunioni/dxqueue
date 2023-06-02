@@ -1,7 +1,7 @@
 import { getConsumersFromInstance, Looper, Queue } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
 
-const sqsConfig = {
+const sqsClientConfig = {
   endpoint: 'http://localhost:4566',
   region: 'us-east-1',
   credentials: {
@@ -14,7 +14,7 @@ let queueUrl: string
 
 beforeEach(async () => {
   const queueName = `dxqueue-test-${Math.floor(Math.random() * 10 ** 12)}`
-  queueUrl = await new SQS(sqsConfig)
+  queueUrl = await new SQS(sqsClientConfig)
     .createQueue({
       QueueName: queueName,
     })
@@ -22,7 +22,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  await new SQS(sqsConfig).deleteQueue({
+  await new SQS(sqsClientConfig).deleteQueue({
     QueueUrl: queueUrl,
   })
 })
@@ -36,7 +36,7 @@ class Domain {
   @Queue<Domain, 'doSomething'>((self) => ({
     backend: {
       type: 'sqs',
-      config: sqsConfig,
+      sqsClientConfig,
       url: self.queueUrl,
       waitTimeSeconds: 0,
     },
