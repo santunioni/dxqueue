@@ -1,7 +1,12 @@
 /**
  * This module is kept separate and use lazy import type hints to avoid requiring the @aws-sdk/client-sqs when not using SQS.
  */
-import { SendMessageCommandOutput, SQSClientConfig } from '@aws-sdk/client-sqs'
+import {
+  Message,
+  SendMessageCommandOutput,
+  SQS,
+  SQSClientConfig,
+} from '@aws-sdk/client-sqs'
 
 type DXQueueSQSBackendMessageAttribute =
   | {
@@ -75,5 +80,12 @@ export type SQSBackendConfig<
   onMessageSent?: (args: {
     params: P
     output: SendMessageCommandOutput
+  }) => void | Promise<void>
+
+  onProcessingError?: (args: {
+    params: P
+    error: Error
+    message: Message
+    sqs: SQS
   }) => void | Promise<void>
 }

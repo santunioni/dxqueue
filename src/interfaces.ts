@@ -1,13 +1,7 @@
-export interface Logger {
-  debug(...content: any[]): void
-  warn(...content: any[]): void
-  error(...content: any[]): void
-}
-
 export interface DXQueueMessage {
   readonly groupId?: string
   ack(): Promise<void>
-  error(error: any): Promise<void>
+  error(error: unknown): Promise<void>
   process(): Promise<void>
 }
 

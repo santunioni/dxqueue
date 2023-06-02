@@ -6,22 +6,22 @@ import {
   DXQueueMessage,
   BatchProcessor,
   Publisher,
-  Logger,
 } from '../interfaces'
 import { defaultGetGroupId, hashCode } from '../initialization/defaults'
 import { SQSBackendConfig } from './sqs.config'
 import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
+import { Fn, MessageConfig } from '../initialization/config'
 
-export class SqsConsumer implements Consumer {
+export class SqsConsumer<P extends any[]> implements Consumer {
   private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
 
   private readonly isFifo: boolean
   private readonly batchProcessor: BatchProcessor
 
   constructor(
-    private readonly processPayload: (payload: string) => Promise<void>,
-    private readonly logger: Logger,
-    private readonly backendConfig: SQSBackendConfig<any>,
+    private readonly processPayload: Fn<P>,
+    private readonly messageConfig: MessageConfig<P>,
+    private readonly backendConfig: SQSBackendConfig<P>,
   ) {
     this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
     this.batchProcessor = this.isFifo
@@ -45,10 +45,10 @@ export class SqsConsumer implements Consumer {
       (message) =>
         new DXQueueMessageSQSWrapper(
           this.processPayload,
-          this.backendConfig.queueUrl,
-          message,
+          this.messageConfig,
+          this.backendConfig,
           this.sqs,
-          this.logger,
+          message,
         ),
     )
 
@@ -56,49 +56,34 @@ export class SqsConsumer implements Consumer {
   }
 }
 
-class DXQueueMessageSQSWrapper implements DXQueueMessage {
+class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   readonly groupId = this.message.Attributes?.MessageGroupId
 
   constructor(
-    private readonly processPayload: (payload: string) => Promise<void>,
-    private readonly queueUrl: string,
-    private readonly message: Message,
+    private readonly processPayload: Fn<P>,
+    private readonly messageConfig: MessageConfig<P>,
+    private readonly backendConfig: SQSBackendConfig<P>,
     private readonly sqs: SQS,
-    private readonly logger: Logger,
-  ) {
-    this.logger.debug('Message received', {
-      QueueUrl: this.queueUrl,
-      MessageId: this.message.MessageId,
-      Attributes: this.message.Attributes,
-      ReceiptHandle: this.message.ReceiptHandle,
-    })
-  }
+    private readonly message: Message,
+  ) {}
 
   async process(): Promise<void> {
-    await this.processPayload(this.message.Body!)
+    await this.processPayload(...this.messageConfig.decode(this.message.Body!))
   }
 
   async ack(): Promise<void> {
     await this.sqs.deleteMessage({
-      QueueUrl: this.queueUrl,
-      ReceiptHandle: this.message.ReceiptHandle,
-    })
-    this.logger.debug('Message deleted', {
-      QueueUrl: this.queueUrl,
-      MessageId: this.message.MessageId,
-      Attributes: this.message.Attributes,
+      QueueUrl: this.backendConfig.queueUrl,
       ReceiptHandle: this.message.ReceiptHandle,
     })
   }
 
-  async error(error: any): Promise<void> {
-    this.logger.error('Error processing message', {
+  readonly error = async (error) => {
+    await this.backendConfig.onProcessingError?.({
+      message: this.message,
       error,
-      QueueUrl: this.queueUrl,
-      Body: this.message.Body,
-      MessageId: this.message.MessageId,
-      Attributes: this.message.Attributes,
-      ReceiptHandle: this.message.ReceiptHandle,
+      params: this.messageConfig.decode(this.message.Body!),
+      sqs: this.sqs,
     })
   }
 }
@@ -110,26 +95,20 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
   private readonly getGroupId: (...params: P) => string
 
   constructor(
-    private readonly logger: Logger,
-    private readonly encoder: (params: P) => string,
+    private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: SQSBackendConfig<P>,
   ) {
     this.getGroupId = backendConfig.getGroupId ?? defaultGetGroupId
     this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
-    if (this.isFifo && this.getGroupId === defaultGetGroupId) {
-      this.logger.warn(
-        'You should define message.getGroupId for fifo queues to guarantee ordering for messages within the same logical group. Defaulting to ordering all messages, which is low performance.',
-      )
-    }
   }
 
   private getDeduplicationId(params: P) {
-    return hashCode(this.encoder(params)).toString(16)
+    return hashCode(this.messageConfig.encode(params)).toString(16)
   }
 
   async publish(...params: P) {
     const sendMessageCommandInput: SendMessageCommandInput = {
-      MessageBody: this.encoder(params),
+      MessageBody: this.messageConfig.encode(params),
       QueueUrl: this.backendConfig.queueUrl,
     }
 

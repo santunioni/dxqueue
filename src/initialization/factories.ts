@@ -1,43 +1,20 @@
-import { Config, Fn, parseConfig } from './config'
-import { Consumer, Logger, Publisher } from '../interfaces'
-
-function wrapReceiverFunction<P extends any[]>(
-  func: Fn<P>,
-  decoder: (b: string) => P,
-  logger: Logger,
-) {
-  return async (payload: string) => {
-    const ret = await func(...decoder(payload))
-    if (ret !== undefined) {
-      logger.warn(
-        'The function wrapped in dxqueue is returning but it should not return anything.',
-        {
-          name: func.name,
-        },
-      )
-    }
-  }
-}
+import { Config, Fn, parseMessageConfig } from './config'
+import { Consumer, Publisher } from '../interfaces'
 
 export function createConsumer<P extends any[]>(
   func: Fn<P>,
   config: Config<P>,
 ): Consumer {
-  const parsedConfig = parseConfig(config)
-  const processPayload = wrapReceiverFunction(
-    func,
-    parsedConfig.decode,
-    parsedConfig.logger,
-  )
+  const messageConfig = parseMessageConfig(config.message ?? {})
 
   if (config.backend.type === 'sqs') {
     const { SqsConsumer } = require('../backends/sqs')
-    return new SqsConsumer(processPayload, parsedConfig.logger, config.backend)
+    return new SqsConsumer(func, messageConfig, config.backend)
   }
 
   if (config.backend.type === 'mock') {
     const { MockConsumer } = require('../backends/mock')
-    return new MockConsumer(config.backend.queue, processPayload)
+    return new MockConsumer(func, messageConfig, config.backend)
   }
 
   throw new Error('Invalid backend type')
@@ -46,20 +23,16 @@ export function createConsumer<P extends any[]>(
 export function createProducer<P extends any[]>(
   config: Config<P>,
 ): Publisher<P> {
-  const parsedConfig = parseConfig(config)
+  const messageConfig = parseMessageConfig(config.message ?? {})
 
   if (config.backend.type === 'sqs') {
     const { SqsProducer } = require('../backends/sqs')
-    return new SqsProducer(
-      parsedConfig.logger,
-      parsedConfig.encode,
-      config.backend,
-    )
+    return new SqsProducer(messageConfig, config.backend)
   }
 
   if (config.backend.type === 'mock') {
     const { MockProducer } = require('../backends/mock')
-    return new MockProducer(config.backend.queue, parsedConfig.encode)
+    return new MockProducer(messageConfig, config.backend)
   }
 
   throw new Error('Invalid backend type')

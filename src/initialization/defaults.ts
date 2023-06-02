@@ -1,5 +1,3 @@
-import type { Logger } from '../interfaces'
-
 /**
  * Simple and cheap hash function to implement content based deduplication for Fifo Queues.
  * @param  {String} str The string to hash.
@@ -22,9 +20,3 @@ export function defaultGetGroupId() {
 
 export const defaultDecode = JSON.parse
 export const defaultEncode = JSON.stringify
-
-export class ConsoleLogger implements Logger {
-  readonly debug = console.debug
-  readonly error = console.error
-  readonly warn = console.warn
-}
