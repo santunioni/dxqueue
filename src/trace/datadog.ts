@@ -30,8 +30,6 @@ export function propagateTraceBaggage(
 
   const span = tracer.scope().active()
 
-  console.log({ span })
-
   if (span === null) {
     return messageAttributes
   }
@@ -41,8 +39,6 @@ export function propagateTraceBaggage(
   const traceId = context.toTraceId()
   const spanId = context.toSpanId()
   const parentId = context.toTraceparent()
-
-  console.log({ traceId, spanId, parentId })
 
   return Object.assign(messageAttributes ?? {}, {
     [X_DATADOG_TRACE_ID]: {
@@ -79,8 +75,6 @@ export function runInTraceContextPropagatedFromBaggageInMessageAttributes<
       toTraceparent: () => parentId,
     }
   }
-
-  console.log({ traceId, spanId, parentId, childOf })
 
   const span = tracer.startSpan('sqs.consume', {
     childOf,
