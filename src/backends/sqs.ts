@@ -30,29 +30,36 @@ export class SqsConsumer<P extends any[]> implements Consumer {
   }
 
   async consume() {
-    const { Messages } = await this.sqs.receiveMessage({
-      QueueUrl: this.backendConfig.queueUrl,
-      MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
-      WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
-      AttributeNames: ['All'],
-    })
+    try {
+      const { Messages } = await this.sqs.receiveMessage({
+        QueueUrl: this.backendConfig.queueUrl,
+        MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
+        WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
+        AttributeNames: ['All'],
+      })
 
-    if (!Messages) {
-      return
+      if (!Messages) {
+        return
+      }
+
+      const messages = Messages.map(
+        (message) =>
+          new DXQueueMessageSQSWrapper<P>(
+            this.processPayload,
+            this.messageConfig,
+            this.backendConfig,
+            this.sqs,
+            message,
+          ),
+      )
+
+      await this.batchProcessor.processMessages(messages)
+    } catch (error) {
+      await (this.backendConfig.onReceiveMessageError ?? console.error)(error)
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000 * (this.backendConfig.waitTimeSeconds ?? 5)),
+      )
     }
-
-    const messages = Messages.map(
-      (message) =>
-        new DXQueueMessageSQSWrapper<P>(
-          this.processPayload,
-          this.messageConfig,
-          this.backendConfig,
-          this.sqs,
-          message,
-        ),
-    )
-
-    await this.batchProcessor.processMessages(messages)
   }
 }
 

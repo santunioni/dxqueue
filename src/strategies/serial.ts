@@ -20,7 +20,7 @@ export class SerialBatchProcessor implements BatchProcessor {
 
     await Promise.all(
       messages.map((message) =>
-        message.error('Message skipped because a previous failure.'),
+        message.error(new Error('Message skipped because a previous failure.')),
       ),
     )
   }

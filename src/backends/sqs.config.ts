@@ -88,4 +88,6 @@ export type SQSBackendConfig<
     message: Message
     sqs: SQS
   }) => void | Promise<void>
+
+  onReceiveMessageError?: (error: unknown) => void | Promise<void>
 }
