@@ -36,7 +36,7 @@ class Domain {
   @Queue<Domain, 'doSomething'>((self) => ({
     backend: {
       type: 'sqs',
-      sqsClientConfig,
+      sqsClient: sqsClientConfig,
       queueUrl: self.queueUrl,
       waitTimeSeconds: 0,
     },

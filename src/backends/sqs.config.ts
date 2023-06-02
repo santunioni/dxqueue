@@ -34,7 +34,7 @@ export type SQSBackendConfig<
   /**
    * The Amazon SQS client configuration to use.
    */
-  sqsClientConfig?: SQSClientConfig
+  sqsClient?: SQS | SQSClientConfig
 
   /**
    * The time in seconds for which the call waits for a message to arrive in the queue before returning.

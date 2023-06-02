@@ -1,4 +1,9 @@
-import { Message, SendMessageCommandInput, SQS } from '@aws-sdk/client-sqs'
+import {
+  Message,
+  SendMessageCommandInput,
+  SQS,
+  SQSClient,
+} from '@aws-sdk/client-sqs'
 import { FifoBatchProcessor } from '../strategies/fifo'
 import { StandardBatchProcessor } from '../strategies/standard'
 import {
@@ -17,7 +22,7 @@ import {
 } from '../trace/datadog'
 
 export class SqsConsumer<P extends any[]> implements Consumer {
-  private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
+  private readonly sqs: SQS
 
   private readonly isFifo: boolean
   private readonly batchProcessor: BatchProcessor
@@ -31,6 +36,15 @@ export class SqsConsumer<P extends any[]> implements Consumer {
     this.batchProcessor = this.isFifo
       ? new FifoBatchProcessor()
       : new StandardBatchProcessor()
+    if (backendConfig.sqsClient) {
+      if (backendConfig.sqsClient instanceof SQSClient) {
+        this.sqs = backendConfig.sqsClient
+      } else {
+        this.sqs = new SQS(backendConfig.sqsClient)
+      }
+    } else {
+      this.sqs = new SQS({})
+    }
   }
 
   async consume() {
@@ -104,7 +118,7 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
 }
 
 export class SqsProducer<P extends any[]> implements Publisher<P> {
-  private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
+  private readonly sqs: SQS
 
   private readonly isFifo: boolean
 
@@ -139,6 +153,15 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       }
     } else {
       this.createNewMessageAttributes = (_) => propagateTraceBaggage() ?? {}
+    }
+    if (backendConfig.sqsClient) {
+      if (backendConfig.sqsClient instanceof SQSClient) {
+        this.sqs = backendConfig.sqsClient
+      } else {
+        this.sqs = new SQS(backendConfig.sqsClient)
+      }
+    } else {
+      this.sqs = new SQS({})
     }
   }
 
