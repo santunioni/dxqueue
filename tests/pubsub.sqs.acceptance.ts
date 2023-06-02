@@ -37,7 +37,7 @@ class Domain {
     backend: {
       type: 'sqs',
       sqsClientConfig,
-      url: self.queueUrl,
+      queueUrl: self.queueUrl,
       waitTimeSeconds: 0,
     },
   }))

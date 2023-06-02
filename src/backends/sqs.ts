@@ -1,9 +1,4 @@
-import {
-  Message,
-  ReceiveMessageCommandInput,
-  SendMessageCommandInput,
-  SQS,
-} from '@aws-sdk/client-sqs'
+import { Message, SendMessageCommandInput, SQS } from '@aws-sdk/client-sqs'
 import { FifoBatchProcessor } from '../strategies/fifo'
 import { StandardBatchProcessor } from '../strategies/standard'
 import {
@@ -15,6 +10,7 @@ import {
 } from '../interfaces'
 import { defaultGetGroupId, hashCode } from '../initialization/defaults'
 import { SQSBackendConfig } from './sqs.config'
+import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
 
 export class SqsConsumer implements Consumer {
   private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
@@ -23,26 +19,22 @@ export class SqsConsumer implements Consumer {
   private readonly batchProcessor: BatchProcessor
 
   constructor(
-    processPayload: (payload: string) => Promise<void>,
+    private readonly processPayload: (payload: string) => Promise<void>,
     private readonly logger: Logger,
     private readonly backendConfig: SQSBackendConfig<any>,
   ) {
-    this.isFifo = backendConfig.url.endsWith('.fifo')
+    this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
     this.batchProcessor = this.isFifo
-      ? new FifoBatchProcessor(processPayload)
-      : new StandardBatchProcessor(processPayload)
+      ? new FifoBatchProcessor()
+      : new StandardBatchProcessor()
   }
 
   async consume() {
     const { Messages } = await this.sqs.receiveMessage({
-      QueueUrl: this.backendConfig.url,
+      QueueUrl: this.backendConfig.queueUrl,
       MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
       WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
-      ...(this.isFifo
-        ? ({
-            AttributeNames: ['MessageGroupId'],
-          } as ReceiveMessageCommandInput)
-        : {}),
+      AttributeNames: ['All'],
     })
 
     if (!Messages) {
@@ -52,7 +44,8 @@ export class SqsConsumer implements Consumer {
     const messages = Messages.map(
       (message) =>
         new DXQueueMessageSQSWrapper(
-          this.backendConfig.url,
+          this.processPayload,
+          this.backendConfig.queueUrl,
           message,
           this.sqs,
           this.logger,
@@ -64,10 +57,10 @@ export class SqsConsumer implements Consumer {
 }
 
 class DXQueueMessageSQSWrapper implements DXQueueMessage {
-  readonly payload = this.message.Body!
   readonly groupId = this.message.Attributes?.MessageGroupId
 
   constructor(
+    private readonly processPayload: (payload: string) => Promise<void>,
     private readonly queueUrl: string,
     private readonly message: Message,
     private readonly sqs: SQS,
@@ -79,6 +72,10 @@ class DXQueueMessageSQSWrapper implements DXQueueMessage {
       Attributes: this.message.Attributes,
       ReceiptHandle: this.message.ReceiptHandle,
     })
+  }
+
+  async process(): Promise<void> {
+    await this.processPayload(this.message.Body!)
   }
 
   async ack(): Promise<void> {
@@ -118,7 +115,7 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
     private readonly backendConfig: SQSBackendConfig<P>,
   ) {
     this.getGroupId = backendConfig.getGroupId ?? defaultGetGroupId
-    this.isFifo = backendConfig.url.endsWith('.fifo')
+    this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
     if (this.isFifo && this.getGroupId === defaultGetGroupId) {
       this.logger.warn(
         'You should define message.getGroupId for fifo queues to guarantee ordering for messages within the same logical group. Defaulting to ordering all messages, which is low performance.',
@@ -131,21 +128,48 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
   }
 
   async publish(...params: P) {
-    const receipt = await this.sqs.sendMessage({
+    const sendMessageCommandInput: SendMessageCommandInput = {
       MessageBody: this.encoder(params),
-      QueueUrl: this.backendConfig.url,
-      ...(this.isFifo
-        ? ({
-            MessageDeduplicationId: this.getDeduplicationId(params),
-            MessageGroupId: this.getGroupId(...params),
-          } as SendMessageCommandInput)
-        : {}),
-    })
+      QueueUrl: this.backendConfig.queueUrl,
+    }
+
+    if (this.isFifo) {
+      Object.assign(sendMessageCommandInput, {
+        MessageDeduplicationId: this.getDeduplicationId(params),
+        MessageGroupId: this.getGroupId(...params),
+      } as SendMessageCommandInput)
+    } else {
+      Object.assign(sendMessageCommandInput, {
+        DelaySeconds: this.backendConfig.delaySeconds,
+      } as SendMessageCommandInput)
+    }
+
+    if (this.backendConfig.createMessageAttributes) {
+      Object.assign(sendMessageCommandInput, {
+        MessageAttributes: this.backendConfig
+          .createMessageAttributes(...params)
+          .reduce((acc, value) => {
+            const messageAttributeValue: MessageAttributeValue = {
+              DataType: value.DataType,
+            }
+            if (value.DataType === 'String' || value.DataType === undefined) {
+              messageAttributeValue.StringValue = value.Value.toString()
+            } else if (value.DataType === 'Binary') {
+              messageAttributeValue.BinaryValue = value.Value
+            }
+            acc[value.Name] = messageAttributeValue
+            return acc
+          }, {} as Record<string, MessageAttributeValue>),
+      } as SendMessageCommandInput)
+    }
+
+    const receipt = await this.sqs.sendMessage(sendMessageCommandInput)
+
     this.logger.debug('Message sent', {
       MessageId: receipt.MessageId,
       $metadata: receipt.$metadata,
       SequenceNumber: receipt.SequenceNumber,
-      QueueUrl: this.backendConfig.url,
+      QueueUrl: this.backendConfig.queueUrl,
     })
   }
 }

@@ -5,10 +5,10 @@ export interface Logger {
 }
 
 export interface DXQueueMessage {
-  readonly payload: string
   readonly groupId?: string
   ack(): Promise<void>
   error(error: any): Promise<void>
+  process(): Promise<void>
 }
 
 export interface BatchProcessor {

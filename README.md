@@ -45,7 +45,7 @@ export class Domain {
   @Queue<Domain, 'doSomething'>((self) => ({
     backend: {
       type: 'sqs',
-      url: self.queueUrl,
+      queueUrl: self.queueUrl,
     },
     message: {
       getGroupId: (my, arg) => my, // <-- Leverage type inference

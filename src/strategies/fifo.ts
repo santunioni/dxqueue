@@ -8,11 +8,7 @@ import { SerialBatchProcessor } from './serial'
  * @private
  */
 export class FifoBatchProcessor implements BatchProcessor {
-  private readonly serialBatchProcessor: SerialBatchProcessor
-
-  constructor(processPayload: (payload: string) => Promise<void> | void) {
-    this.serialBatchProcessor = new SerialBatchProcessor(processPayload)
-  }
+  private readonly serialBatchProcessor = new SerialBatchProcessor()
 
   async processMessages(messages: DXQueueMessage[]) {
     const messagesByGroupId = messages.reduce((acc, message) => {

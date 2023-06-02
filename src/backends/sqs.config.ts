@@ -2,19 +2,34 @@
  * This module is kept separate and use lazy import type hints to avoid requiring the @aws-sdk/client-sqs when not using SQS.
  */
 
-const LazySQSModule = () => require('@aws-sdk/client-sqs').SQSClient
+const LazySQSClient = () => require('@aws-sdk/client-sqs').SQSClient
 
 type SQSClientConfig = ConstructorParameters<
-  ReturnType<typeof LazySQSModule>
+  ReturnType<typeof LazySQSClient>
 >[0]
 
-export type SQSBackendConfig<P extends any[]> = {
+type DXQueueSQSBackendMessageAttribute =
+  | {
+      Name: string
+      DataType?: 'String'
+      Value: string | number
+    }
+  | {
+      Name: string
+      DataType: 'Binary'
+      Value: Uint8Array
+    }
+
+export type SQSBackendConfig<
+  P extends any[],
+  Attributes extends DXQueueSQSBackendMessageAttribute[] = DXQueueSQSBackendMessageAttribute[],
+> = {
   type: 'sqs'
   /**
    * The URL of the Amazon SQS queue to take action on.
    * @type import('@aws-sdk/client-sqs').ReceiveMessageCommandInput#QueueUrl
    */
-  url: string
+  queueUrl: string
 
   /**
    * The Amazon SQS client configuration to use.
@@ -32,6 +47,22 @@ export type SQSBackendConfig<P extends any[]> = {
    * @type import('@aws-sdk/client-sqs').ReceiveMessageCommandInput#MaxNumberOfMessages
    */
   maxNumberOfMessages?: number
+
+  /**
+   * <p>
+   *           The length of time, in seconds, for which to delay a specific message. Valid values: 0 to 900. Maximum: 15 minutes. Messages with a positive <code>DelaySeconds</code> value become available for processing after the delay period is finished.
+   *           If you don't specify a value, the default value for the queue applies.
+   *     </p>
+   *          <note>
+   *             <p>When you set <code>FifoQueue</code>, you can't set <code>DelaySeconds</code> per message. You can set this parameter only on a queue level.</p>
+   *          </note>
+   */
+  delaySeconds?: number
+
+  /**
+   * @type import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageAttributes
+   */
+  createMessageAttributes?: (...params: P) => Attributes
 
   /**
    * Used for FIFO queues, ignored for standard. The group id is used for ordering messages within a 5-minute period.

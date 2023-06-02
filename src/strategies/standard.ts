@@ -6,15 +6,13 @@ import { BatchProcessor, DXQueueMessage } from '../interfaces'
  * @private
  */
 export class StandardBatchProcessor implements BatchProcessor {
-  constructor(
-    private readonly processPayload: (payload: string) => Promise<void> | void,
-  ) {}
+  constructor() {}
 
   async processMessages(Messages: DXQueueMessage[]) {
     await Promise.all(
       Messages.map(async (message) => {
         try {
-          await this.processPayload(message.payload)
+          await message.process()
           await message.ack()
         } catch (error) {
           await message.error(error)
