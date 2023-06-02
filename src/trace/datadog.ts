@@ -51,8 +51,11 @@ export function propagateTraceBaggage(
 }
 
 export function runInTraceContextPropagatedFromBaggageInMessageAttributes<
-  F extends (...args: any[]) => any,
->(fn: F, messageAttributes?: Record<string, MessageAttributeValue>) {
+  Ret extends any,
+>(
+  fn: () => Ret,
+  messageAttributes?: Record<string, MessageAttributeValue>,
+): Ret {
   if (tracer === null) {
     return fn()
   }
@@ -72,5 +75,5 @@ export function runInTraceContextPropagatedFromBaggageInMessageAttributes<
     childOf,
   })
 
-  return tracer.scope().activate(span, () => fn())
+  return tracer.scope().activate(span, fn)
 }
