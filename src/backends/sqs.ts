@@ -7,7 +7,6 @@ import {
   BatchProcessor,
   Publisher,
 } from '../interfaces'
-import { defaultGetGroupId, hashCode } from '../initialization/defaults'
 import { SQSBackendConfig } from './sqs.config'
 import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
 import { Fn, MessageConfig } from '../initialization/config'
@@ -108,32 +107,49 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
   private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
 
   private readonly isFifo: boolean
-  private readonly getGroupId: (...params: P) => string
+
+  private readonly createNewMessageAttributes: (params: P) => {
+    [key: string]: MessageAttributeValue
+  }
 
   constructor(
     private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: SQSBackendConfig<P>,
   ) {
-    this.getGroupId = backendConfig.getGroupId ?? defaultGetGroupId
     this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
-  }
-
-  private getDeduplicationId(params: P) {
-    return hashCode(this.messageConfig.encode(params)).toString(16)
+    if (this.isFifo) {
+      if (
+        this.backendConfig.getDeduplicationId &&
+        this.backendConfig.getGroupId
+      ) {
+        this.createNewMessageAttributes = (params) =>
+          Object.assign(
+            {
+              MessageDeduplicationId: this.backendConfig.getDeduplicationId!(
+                ...params,
+              ),
+              MessageGroupId: this.backendConfig.getGroupId!(...params),
+            },
+            propagateTraceBaggage() ?? {},
+          )
+      } else {
+        throw new Error(
+          'FIFO queue requires getDeduplicationId and getGroupId.',
+        )
+      }
+    } else {
+      this.createNewMessageAttributes = (_) => propagateTraceBaggage() ?? {}
+    }
   }
 
   private async _publish(...params: P) {
     const sendMessageCommandInput: SendMessageCommandInput = {
       MessageBody: this.messageConfig.encode(params),
       QueueUrl: this.backendConfig.queueUrl,
-      MessageAttributes: propagateTraceBaggage(),
+      MessageAttributes: this.createNewMessageAttributes(params),
     }
 
-    if (this.isFifo) {
-      sendMessageCommandInput.MessageDeduplicationId =
-        this.getDeduplicationId(params)
-      sendMessageCommandInput.MessageGroupId = this.getGroupId(...params)
-    } else {
+    if (!this.isFifo) {
       sendMessageCommandInput.DelaySeconds = this.backendConfig.delaySeconds
     }
 

@@ -1,4 +1,3 @@
-import { defaultDecode, defaultEncode } from './defaults'
 import { MockBackendConfig } from '../backends/mock'
 import { SQSBackendConfig } from '../backends/sqs.config'
 
@@ -25,8 +24,8 @@ export type Fn<P extends any[]> = (...params: P) => void | Promise<void>
 export function parseMessageConfig<P extends any[]>(
   messageConfig: Partial<MessageConfig<P>>,
 ): MessageConfig<P> {
-  const decode: (b: string) => P = messageConfig?.decode ?? defaultDecode
-  const encode: (params: P) => string = messageConfig?.encode ?? defaultEncode
+  const decode: (b: string) => P = messageConfig?.decode ?? JSON.parse
+  const encode: (params: P) => string = messageConfig?.encode ?? JSON.stringify
 
   return {
     decode,
