@@ -11,6 +11,11 @@ import { defaultGetGroupId, hashCode } from '../initialization/defaults'
 import { SQSBackendConfig } from './sqs.config'
 import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
 import { Fn, MessageConfig } from '../initialization/config'
+import {
+  propagateTraceBaggage,
+  runInTraceContextPropagatedFromBaggageInMessageAttributes,
+  wrapInTracer,
+} from '../trace/datadog'
 
 export class SqsConsumer<P extends any[]> implements Consumer {
   private readonly sqs = new SQS(this.backendConfig.sqsClientConfig ?? {})
@@ -75,7 +80,11 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   ) {}
 
   async process(): Promise<void> {
-    await this.processPayload(...this.messageConfig.decode(this.message.Body!))
+    await runInTraceContextPropagatedFromBaggageInMessageAttributes(
+      () =>
+        this.processPayload(...this.messageConfig.decode(this.message.Body!)),
+      this.message.MessageAttributes,
+    )
   }
 
   async ack(): Promise<void> {
@@ -113,26 +122,25 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
     return hashCode(this.messageConfig.encode(params)).toString(16)
   }
 
-  async publish(...params: P) {
+  private async _publish(...params: P) {
     const sendMessageCommandInput: SendMessageCommandInput = {
       MessageBody: this.messageConfig.encode(params),
       QueueUrl: this.backendConfig.queueUrl,
+      MessageAttributes: propagateTraceBaggage(),
     }
 
     if (this.isFifo) {
-      Object.assign(sendMessageCommandInput, {
-        MessageDeduplicationId: this.getDeduplicationId(params),
-        MessageGroupId: this.getGroupId(...params),
-      } as SendMessageCommandInput)
+      sendMessageCommandInput.MessageDeduplicationId =
+        this.getDeduplicationId(params)
+      sendMessageCommandInput.MessageGroupId = this.getGroupId(...params)
     } else {
-      Object.assign(sendMessageCommandInput, {
-        DelaySeconds: this.backendConfig.delaySeconds,
-      } as SendMessageCommandInput)
+      sendMessageCommandInput.DelaySeconds = this.backendConfig.delaySeconds
     }
 
     if (this.backendConfig.createMessageAttributes) {
-      Object.assign(sendMessageCommandInput, {
-        MessageAttributes: this.backendConfig
+      sendMessageCommandInput.MessageAttributes = Object.assign(
+        sendMessageCommandInput.MessageAttributes ?? {},
+        this.backendConfig
           .createMessageAttributes(...params)
           .reduce((acc, value) => {
             const messageAttributeValue: MessageAttributeValue = {
@@ -146,11 +154,13 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
             acc[value.Name] = messageAttributeValue
             return acc
           }, {} as Record<string, MessageAttributeValue>),
-      } as SendMessageCommandInput)
+      )
     }
 
     const output = await this.sqs.sendMessage(sendMessageCommandInput)
 
     await this.backendConfig.onMessageSent?.({ output, params })
   }
+
+  readonly publish = wrapInTracer(this._publish)
 }
