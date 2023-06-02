@@ -1,12 +1,7 @@
 /**
  * This module is kept separate and use lazy import type hints to avoid requiring the @aws-sdk/client-sqs when not using SQS.
  */
-
-const LazySQSClient = () => require('@aws-sdk/client-sqs').SQSClient
-
-type SQSClientConfig = ConstructorParameters<
-  ReturnType<typeof LazySQSClient>
->[0]
+import { SendMessageCommandOutput, SQSClientConfig } from '@aws-sdk/client-sqs'
 
 type DXQueueSQSBackendMessageAttribute =
   | {
@@ -76,4 +71,9 @@ export type SQSBackendConfig<
    * @param params the same params passed to the function wrapped in pubsub.
    */
   getDeduplicationId?: (...params: P) => string
+
+  onMessageSent?: (args: {
+    params: P
+    output: SendMessageCommandOutput
+  }) => void | Promise<void>
 }

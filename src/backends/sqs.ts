@@ -163,13 +163,8 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       } as SendMessageCommandInput)
     }
 
-    const receipt = await this.sqs.sendMessage(sendMessageCommandInput)
+    const output = await this.sqs.sendMessage(sendMessageCommandInput)
 
-    this.logger.debug('Message sent', {
-      MessageId: receipt.MessageId,
-      $metadata: receipt.$metadata,
-      SequenceNumber: receipt.SequenceNumber,
-      QueueUrl: this.backendConfig.queueUrl,
-    })
+    await this.backendConfig.onMessageSent?.({ output, params })
   }
 }
