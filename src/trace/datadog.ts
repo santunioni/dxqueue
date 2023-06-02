@@ -18,7 +18,6 @@ export function wrapInTracer<F>(fn: F): F {
 }
 
 const X_DATADOG_TRACE_ID = 'x-datadog-trace-id'
-const X_DATADOG_PARENT_ID = 'x-datadog-parent-id'
 const X_DATADOG_SPAN_ID = 'x-datadog-span-id'
 
 export function propagateTraceBaggage(
@@ -38,16 +37,11 @@ export function propagateTraceBaggage(
 
   const traceId = context.toTraceId()
   const spanId = context.toSpanId()
-  const parentId = context.toTraceparent()
 
   return Object.assign(messageAttributes ?? {}, {
     [X_DATADOG_TRACE_ID]: {
       DataType: 'String',
       StringValue: traceId,
-    },
-    [X_DATADOG_PARENT_ID]: {
-      DataType: 'String',
-      StringValue: parentId,
     },
     [X_DATADOG_SPAN_ID]: {
       DataType: 'String',
@@ -65,14 +59,12 @@ export function runInTraceContextPropagatedFromBaggageInMessageAttributes<
 
   const traceId = messageAttributes?.[X_DATADOG_TRACE_ID].StringValue
   const spanId = messageAttributes?.[X_DATADOG_SPAN_ID].StringValue
-  const parentId = messageAttributes?.[X_DATADOG_PARENT_ID].StringValue
 
   let childOf: SpanContext | undefined
-  if (traceId && spanId && parentId) {
+  if (traceId && spanId) {
     childOf = {
       toSpanId: () => spanId,
       toTraceId: () => traceId,
-      toTraceparent: () => parentId,
     }
   }
 
