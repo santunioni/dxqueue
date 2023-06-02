@@ -43,7 +43,7 @@ export class SqsConsumer<P extends any[]> implements Consumer {
 
     const messages = Messages.map(
       (message) =>
-        new DXQueueMessageSQSWrapper(
+        new DXQueueMessageSQSWrapper<P>(
           this.processPayload,
           this.messageConfig,
           this.backendConfig,
