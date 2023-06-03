@@ -20,17 +20,18 @@ export function wrapInTracer<F>(fn: F): F {
 const X_DATADOG_TRACE_ID = 'x-datadog-trace-id'
 const X_DATADOG_SPAN_ID = 'x-datadog-span-id'
 
-export function propagateTraceBaggage(
-  messageAttributes?: Record<string, MessageAttributeValue>,
-): Record<string, MessageAttributeValue> | undefined {
+export function getTraceAsMessageAttributes(): Record<
+  string,
+  MessageAttributeValue
+> {
   if (tracer === null) {
-    return messageAttributes
+    return {}
   }
 
   const span = tracer.scope().active()
 
   if (span === null) {
-    return messageAttributes
+    return {}
   }
 
   const context = span.context()
@@ -38,7 +39,7 @@ export function propagateTraceBaggage(
   const traceId = context.toTraceId()
   const spanId = context.toSpanId()
 
-  return Object.assign(messageAttributes ?? {}, {
+  return {
     [X_DATADOG_TRACE_ID]: {
       DataType: 'String',
       StringValue: traceId,
@@ -47,7 +48,7 @@ export function propagateTraceBaggage(
       DataType: 'String',
       StringValue: spanId,
     },
-  } as Record<string, MessageAttributeValue>)
+  } as Record<string, MessageAttributeValue>
 }
 
 export function runInTraceContextPropagatedFromBaggageInMessageAttributes<

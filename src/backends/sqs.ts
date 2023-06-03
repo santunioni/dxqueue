@@ -18,7 +18,7 @@ import { SQSBackendConfig } from './sqs.config'
 import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
 import { Fn, MessageConfig } from '../initialization/config'
 import {
-  propagateTraceBaggage,
+  getTraceAsMessageAttributes,
   runInTraceContextPropagatedFromBaggageInMessageAttributes,
   wrapInTracer,
 } from '../trace/datadog'
@@ -121,52 +121,47 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
 export class SqsProducer<P extends any[]> implements Publisher<P> {
   private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
 
-  private readonly isFifo: boolean
-
-  private readonly createNewMessageAttributes: (params: P) => {
-    [key: string]: MessageAttributeValue
-  }
+  private readonly createSendMessageCommandInput: (
+    params: P,
+  ) => SendMessageCommandInput
 
   constructor(
     private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: SQSBackendConfig<P>,
   ) {
-    this.isFifo = backendConfig.queueUrl.endsWith('.fifo')
-    if (this.isFifo) {
+    const isFifo = backendConfig.queueUrl.endsWith('.fifo')
+
+    if (isFifo) {
       if (
         this.backendConfig.getDeduplicationId &&
         this.backendConfig.getGroupId
       ) {
-        this.createNewMessageAttributes = (params) =>
-          Object.assign(
-            {
-              MessageDeduplicationId: this.backendConfig.getDeduplicationId!(
-                ...params,
-              ),
-              MessageGroupId: this.backendConfig.getGroupId!(...params),
-            },
-            propagateTraceBaggage() ?? {},
-          )
+        this.createSendMessageCommandInput = (params: P) => ({
+          MessageBody: this.messageConfig.encode(params),
+          QueueUrl: this.backendConfig.queueUrl,
+          MessageAttributes: getTraceAsMessageAttributes(),
+          MessageDeduplicationId: this.backendConfig.getDeduplicationId!(
+            ...params,
+          ),
+          MessageGroupId: this.backendConfig.getGroupId!(...params),
+        })
       } else {
         throw new Error(
           'FIFO queue requires getDeduplicationId and getGroupId.',
         )
       }
     } else {
-      this.createNewMessageAttributes = (_) => propagateTraceBaggage() ?? {}
+      this.createSendMessageCommandInput = (params: P) => ({
+        MessageBody: this.messageConfig.encode(params),
+        QueueUrl: this.backendConfig.queueUrl,
+        MessageAttributes: getTraceAsMessageAttributes(),
+        DelaySeconds: this.backendConfig.delaySeconds,
+      })
     }
   }
 
   private async _publish(...params: P) {
-    const sendMessageCommandInput: SendMessageCommandInput = {
-      MessageBody: this.messageConfig.encode(params),
-      QueueUrl: this.backendConfig.queueUrl,
-      MessageAttributes: this.createNewMessageAttributes(params),
-    }
-
-    if (!this.isFifo) {
-      sendMessageCommandInput.DelaySeconds = this.backendConfig.delaySeconds
-    }
+    const sendMessageCommandInput = this.createSendMessageCommandInput(params)
 
     if (this.backendConfig.createMessageAttributes) {
       sendMessageCommandInput.MessageAttributes = Object.assign(
@@ -192,7 +187,11 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       new SendMessageCommand(sendMessageCommandInput),
     )
 
-    await this.backendConfig.onMessageSent?.({ output, params })
+    await this.backendConfig.onMessageSent?.({
+      output,
+      params,
+      input: sendMessageCommandInput,
+    })
   }
 
   readonly publish = wrapInTracer(this._publish)
