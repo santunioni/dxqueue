@@ -4,7 +4,7 @@
 import type {
   Message,
   SendMessageCommandOutput,
-  SQS,
+  SQSClient,
 } from '@aws-sdk/client-sqs'
 
 type DXQueueSQSBackendMessageAttribute =
@@ -33,7 +33,7 @@ export type SQSBackendConfig<
   /**
    * The Amazon SQS client configuration to use.
    */
-  sqsClient?: SQS
+  sqsClient?: SQSClient
 
   /**
    * The time in seconds for which the call waits for a message to arrive in the queue before returning.

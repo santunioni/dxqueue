@@ -1,4 +1,11 @@
-import { Message, SendMessageCommandInput, SQS } from '@aws-sdk/client-sqs'
+import {
+  DeleteMessageCommand,
+  Message,
+  ReceiveMessageCommand,
+  SendMessageCommand,
+  SendMessageCommandInput,
+  SQSClient,
+} from '@aws-sdk/client-sqs'
 import { FifoBatchProcessor } from '../strategies/fifo'
 import { StandardBatchProcessor } from '../strategies/standard'
 import {
@@ -17,7 +24,7 @@ import {
 } from '../trace/datadog'
 
 export class SqsConsumer<P extends any[]> implements Consumer {
-  private readonly sqs = this.backendConfig.sqsClient ?? new SQS({})
+  private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
 
   private readonly isFifo: boolean
   private readonly batchProcessor: BatchProcessor
@@ -35,13 +42,15 @@ export class SqsConsumer<P extends any[]> implements Consumer {
 
   async consume() {
     try {
-      const { Messages } = await this.sqs.receiveMessage({
-        QueueUrl: this.backendConfig.queueUrl,
-        MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
-        WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
-        AttributeNames: ['All'],
-        MessageAttributeNames: ['All'],
-      })
+      const { Messages } = await this.sqs.send(
+        new ReceiveMessageCommand({
+          QueueUrl: this.backendConfig.queueUrl,
+          MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
+          WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
+          AttributeNames: ['All'],
+          MessageAttributeNames: ['All'],
+        }),
+      )
 
       if (!Messages) {
         return
@@ -75,7 +84,7 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
     private readonly processPayload: Fn<P>,
     private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: SQSBackendConfig<P>,
-    private readonly sqs: SQS,
+    private readonly sqs: SQSClient,
     private readonly message: Message,
   ) {}
 
@@ -85,10 +94,12 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
         await this.processPayload(
           ...this.messageConfig.decode(this.message.Body!),
         )
-        await this.sqs.deleteMessage({
-          QueueUrl: this.backendConfig.queueUrl,
-          ReceiptHandle: this.message.ReceiptHandle,
-        })
+        await this.sqs.send(
+          new DeleteMessageCommand({
+            QueueUrl: this.backendConfig.queueUrl,
+            ReceiptHandle: this.message.ReceiptHandle,
+          }),
+        )
       },
       this.message.MessageAttributes,
     )
@@ -108,7 +119,7 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
 }
 
 export class SqsProducer<P extends any[]> implements Publisher<P> {
-  private readonly sqs = this.backendConfig.sqsClient ?? new SQS({})
+  private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
 
   private readonly isFifo: boolean
 
@@ -177,7 +188,9 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       )
     }
 
-    const output = await this.sqs.sendMessage(sendMessageCommandInput)
+    const output = await this.sqs.send(
+      new SendMessageCommand(sendMessageCommandInput),
+    )
 
     await this.backendConfig.onMessageSent?.({ output, params })
   }
