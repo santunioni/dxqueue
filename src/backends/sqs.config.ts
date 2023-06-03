@@ -1,11 +1,10 @@
 /**
  * This module is kept separate and use lazy import type hints to avoid requiring the @aws-sdk/client-sqs when not using SQS.
  */
-import {
+import type {
   Message,
   SendMessageCommandOutput,
   SQS,
-  SQSClientConfig,
 } from '@aws-sdk/client-sqs'
 
 type DXQueueSQSBackendMessageAttribute =
@@ -34,7 +33,7 @@ export type SQSBackendConfig<
   /**
    * The Amazon SQS client configuration to use.
    */
-  sqsClient?: SQS | SQSClientConfig
+  sqsClient?: SQS
 
   /**
    * The time in seconds for which the call waits for a message to arrive in the queue before returning.
@@ -86,7 +85,6 @@ export type SQSBackendConfig<
     params: P
     error: Error
     message: Message
-    sqs: SQS
   }) => void | Promise<void>
 
   onReceiveMessageError?: (error: unknown) => void | Promise<void>

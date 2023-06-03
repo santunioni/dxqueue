@@ -2,7 +2,6 @@ import {
   Message,
   SendMessageCommandInput,
   SQS,
-  SQSClient,
 } from '@aws-sdk/client-sqs'
 import { FifoBatchProcessor } from '../strategies/fifo'
 import { StandardBatchProcessor } from '../strategies/standard'
@@ -22,7 +21,7 @@ import {
 } from '../trace/datadog'
 
 export class SqsConsumer<P extends any[]> implements Consumer {
-  private readonly sqs: SQS
+  private readonly sqs = this.backendConfig.sqsClient ?? new SQS({})
 
   private readonly isFifo: boolean
   private readonly batchProcessor: BatchProcessor
@@ -36,15 +35,6 @@ export class SqsConsumer<P extends any[]> implements Consumer {
     this.batchProcessor = this.isFifo
       ? new FifoBatchProcessor()
       : new StandardBatchProcessor()
-    if (backendConfig.sqsClient) {
-      if (backendConfig.sqsClient instanceof SQSClient) {
-        this.sqs = backendConfig.sqsClient
-      } else {
-        this.sqs = new SQS(backendConfig.sqsClient)
-      }
-    } else {
-      this.sqs = new SQS({})
-    }
   }
 
   async consume() {
@@ -54,6 +44,7 @@ export class SqsConsumer<P extends any[]> implements Consumer {
         MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
         WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
         AttributeNames: ['All'],
+        MessageAttributeNames: ['All'],
       })
 
       if (!Messages) {
@@ -94,31 +85,34 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
 
   async process(): Promise<void> {
     await runInTraceContextPropagatedFromBaggageInMessageAttributes(
-      () =>
-        this.processPayload(...this.messageConfig.decode(this.message.Body!)),
+      async () => {
+        await this.processPayload(
+          ...this.messageConfig.decode(this.message.Body!),
+        )
+        await this.sqs.deleteMessage({
+          QueueUrl: this.backendConfig.queueUrl,
+          ReceiptHandle: this.message.ReceiptHandle,
+        })
+      },
       this.message.MessageAttributes,
     )
   }
 
-  async ack(): Promise<void> {
-    await this.sqs.deleteMessage({
-      QueueUrl: this.backendConfig.queueUrl,
-      ReceiptHandle: this.message.ReceiptHandle,
-    })
-  }
-
-  readonly error = async (error) => {
-    await this.backendConfig.onProcessingError?.({
-      message: this.message,
-      error,
-      params: this.messageConfig.decode(this.message.Body!),
-      sqs: this.sqs,
-    })
+  async error(error: Error) {
+    await runInTraceContextPropagatedFromBaggageInMessageAttributes(
+      () =>
+        this.backendConfig.onProcessingError?.({
+          message: this.message,
+          error,
+          params: this.messageConfig.decode(this.message.Body!),
+        }),
+      this.message.MessageAttributes,
+    )
   }
 }
 
 export class SqsProducer<P extends any[]> implements Publisher<P> {
-  private readonly sqs: SQS
+  private readonly sqs = this.backendConfig.sqsClient ?? new SQS({})
 
   private readonly isFifo: boolean
 
@@ -153,15 +147,6 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       }
     } else {
       this.createNewMessageAttributes = (_) => propagateTraceBaggage() ?? {}
-    }
-    if (backendConfig.sqsClient) {
-      if (backendConfig.sqsClient instanceof SQSClient) {
-        this.sqs = backendConfig.sqsClient
-      } else {
-        this.sqs = new SQS(backendConfig.sqsClient)
-      }
-    } else {
-      this.sqs = new SQS({})
     }
   }
 

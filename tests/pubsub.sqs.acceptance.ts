@@ -1,20 +1,20 @@
 import { getConsumersFromInstance, Looper, Queue } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
 
-const sqsClientConfig = {
-  endpoint: 'http://localhost:4566',
-  region: 'us-east-1',
-  credentials: {
-    accessKeyId: 'test',
-    secretAccessKey: 'test',
-  },
-}
-
+let sqsClient: SQS
 let queueUrl: string
 
 beforeEach(async () => {
   const queueName = `dxqueue-test-${Math.floor(Math.random() * 10 ** 12)}`
-  queueUrl = await new SQS(sqsClientConfig)
+  sqsClient = new SQS({
+    endpoint: 'http://localhost:4566',
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+    },
+  })
+  queueUrl = await sqsClient
     .createQueue({
       QueueName: queueName,
     })
@@ -22,7 +22,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  await new SQS(sqsClientConfig).deleteQueue({
+  await sqsClient.deleteQueue({
     QueueUrl: queueUrl,
   })
 })
@@ -31,12 +31,13 @@ class Domain {
   constructor(
     private readonly queueUrl: string,
     private readonly doSomethingInnerCode: (my: string, arg: number) => void,
+    private readonly sqsClient: SQS,
   ) {}
 
   @Queue<Domain, 'doSomething'>((self) => ({
     backend: {
       type: 'sqs',
-      sqsClient: sqsClientConfig,
+      sqsClient: self.sqsClient,
       queueUrl: self.queueUrl,
       waitTimeSeconds: 0,
     },
@@ -50,7 +51,7 @@ describe('DXQueue', () => {
   it('should publish message instead of calling method', async () => {
     // Given a method decorated with @Queue
     const doSomethingInnerCode = jest.fn()
-    const domain = new Domain(queueUrl, doSomethingInnerCode)
+    const domain = new Domain(queueUrl, doSomethingInnerCode, sqsClient)
 
     // When the method is called
     await domain.doSomething('my', 1)
@@ -62,7 +63,7 @@ describe('DXQueue', () => {
   it('should call method when consumer runs', async () => {
     // Given a method decorated with @Queue is called
     const doSomethingInnerCode = jest.fn()
-    const domain = new Domain(queueUrl, doSomethingInnerCode)
+    const domain = new Domain(queueUrl, doSomethingInnerCode, sqsClient)
     await domain.doSomething('my', 2)
 
     // When the consumer runs
