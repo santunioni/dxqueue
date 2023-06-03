@@ -1,8 +1,4 @@
-import {
-  Message,
-  SendMessageCommandInput,
-  SQS,
-} from '@aws-sdk/client-sqs'
+import { Message, SendMessageCommandInput, SQS } from '@aws-sdk/client-sqs'
 import { FifoBatchProcessor } from '../strategies/fifo'
 import { StandardBatchProcessor } from '../strategies/standard'
 import {
