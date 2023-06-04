@@ -47,6 +47,7 @@ export class SqsConsumer<P extends any[]> implements Consumer {
           QueueUrl: this.backendConfig.queueUrl,
           MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
           WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
+          VisibilityTimeout: this.backendConfig.visibilityTimeoutSeconds,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
         }),

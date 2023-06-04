@@ -50,6 +50,11 @@ export type SQSBackendConfig<
   delaySeconds?: number
 
   /**
+   * The duration (in seconds) that the received messages are hidden from subsequent retrieve requests after being retrieved by a ReceiveMessage request.
+   */
+  visibilityTimeoutSeconds?: number
+
+  /**
    * @type import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageAttributes
    */
   createMessageAttributes?: (...params: P) => Attributes
