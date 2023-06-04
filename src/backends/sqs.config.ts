@@ -50,7 +50,7 @@ export type SQSBackendConfig<
   delaySeconds?: number
 
   /**
-   * The duration (in seconds) that the received messages are hidden from subsequent retrieve requests after being retrieved by a ReceiveMessage request.
+   * The duration (in seconds) that the received messages are hidden from subsequent retrieve requests after being retrieved by a ReceiveMessage request. Values range: 0 to 43200. Maximum: 12 hours.
    */
   visibilityTimeoutSeconds?: number
 
