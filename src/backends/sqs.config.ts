@@ -60,17 +60,18 @@ export type SQSBackendConfig<
   createMessageAttributes?: (...params: P) => Attributes
 
   /**
-   * Used for FIFO queues, ignored for standard. The group id is used for ordering messages within a 5-minute period.
+   * Used for FIFO queues, ignored for standard. The messages with same groupId have ordering guaranteed.
    * @param params the same params passed to the function wrapped in pubsub.
+   * @external import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageGroupId
    */
-  getGroupId?: (...params: P) => string
+  createGroupId?: (...params: P) => string
 
   /**
    * Used for FIFO queues, ignored for standard. The deduplication id is used for deduplication of messages within a 5-minute period.
-   * Defaults to hashing the params.
    * @param params the same params passed to the function wrapped in pubsub.
+   * @external import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageDeduplicationId
    */
-  getDeduplicationId?: (...params: P) => string
+  createDeduplicationId?: (...params: P) => string
 
   onMessageSent?: (args: {
     params: P

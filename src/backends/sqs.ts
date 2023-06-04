@@ -152,23 +152,18 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
     const isFifo = backendConfig.queueUrl.endsWith('.fifo')
 
     if (isFifo) {
-      if (
-        this.backendConfig.getDeduplicationId &&
-        this.backendConfig.getGroupId
-      ) {
+      if (this.backendConfig.createGroupId) {
         this.createSendMessageCommandInput = (params: P) => ({
           MessageBody: this.messageConfig.encode(params),
           QueueUrl: this.backendConfig.queueUrl,
           MessageAttributes: getTraceAsMessageAttributes(),
-          MessageDeduplicationId: this.backendConfig.getDeduplicationId!(
+          MessageDeduplicationId: this.backendConfig.createDeduplicationId?.(
             ...params,
           ),
-          MessageGroupId: this.backendConfig.getGroupId!(...params),
+          MessageGroupId: this.backendConfig.createGroupId!(...params),
         })
       } else {
-        throw new Error(
-          'FIFO queue requires getDeduplicationId and getGroupId.',
-        )
+        throw new Error('FIFO queue requires createGroupId.')
       }
     } else {
       this.createSendMessageCommandInput = (params: P) => ({
