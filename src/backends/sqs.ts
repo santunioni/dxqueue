@@ -1,4 +1,5 @@
 import {
+  ChangeMessageVisibilityCommand,
   DeleteMessageCommand,
   Message,
   ReceiveMessageCommand,
@@ -108,12 +109,30 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
 
   async error(error: Error) {
     await runInTraceContextPropagatedFromBaggageInMessageAttributes(
-      () =>
-        this.backendConfig.onProcessingError?.({
-          message: this.message,
-          error,
-          params: this.messageConfig.decode(this.message.Body!),
-        }),
+      async () => {
+        const promises: (void | Promise<void | any>)[] = []
+        if (this.backendConfig.onProcessingError) {
+          promises.push(
+            this.backendConfig.onProcessingError({
+              message: this.message,
+              error,
+              params: this.messageConfig.decode(this.message.Body!),
+            }),
+          )
+        }
+        if (this.backendConfig.visibilityTimeoutSeconds) {
+          promises.push(
+            this.sqs.send(
+              new ChangeMessageVisibilityCommand({
+                QueueUrl: this.backendConfig.queueUrl,
+                ReceiptHandle: this.message.ReceiptHandle,
+                VisibilityTimeout: 0,
+              }),
+            ),
+          )
+        }
+        await Promise.all(promises)
+      },
       this.message.MessageAttributes,
     )
   }
