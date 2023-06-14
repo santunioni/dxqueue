@@ -85,6 +85,6 @@ export type SQSBackendConfig<P extends any[]> = {
 
   consumerWrapper?: (
     message: Message,
-    callback: () => Promise<void>,
+    callback: () => Promise<void> | void,
   ) => Promise<void> | void
 }
