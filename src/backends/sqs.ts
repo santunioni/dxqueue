@@ -16,13 +16,7 @@ import {
   Publisher,
 } from '../interfaces'
 import { SQSBackendConfig } from './sqs.config'
-import { MessageAttributeValue } from '@aws-sdk/client-sqs/dist-types/models/models_0'
 import { Fn, MessageConfig } from '../initialization/config'
-import {
-  getTraceAsMessageAttributes,
-  runInTraceContextPropagatedFromBaggageInMessageAttributes,
-  wrapInTracer,
-} from '../trace/datadog'
 
 export class SqsConsumer<P extends any[]> implements Consumer {
   private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
@@ -91,50 +85,58 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   ) {}
 
   async process(): Promise<void> {
-    await runInTraceContextPropagatedFromBaggageInMessageAttributes(
-      async () => {
-        await this.processPayload(
-          ...this.messageConfig.decode(this.message.Body!),
-        )
-        await this.sqs.send(
-          new DeleteMessageCommand({
-            QueueUrl: this.backendConfig.queueUrl,
-            ReceiptHandle: this.message.ReceiptHandle,
-          }),
-        )
-      },
-      this.message.MessageAttributes,
+    if (this.backendConfig.consumerWrapper) {
+      await this.backendConfig.consumerWrapper(this.message, () =>
+        this._process(),
+      )
+    } else {
+      await this._process()
+    }
+  }
+
+  private async _process(): Promise<void> {
+    await this.processPayload(...this.messageConfig.decode(this.message.Body!))
+    await this.sqs.send(
+      new DeleteMessageCommand({
+        QueueUrl: this.backendConfig.queueUrl,
+        ReceiptHandle: this.message.ReceiptHandle,
+      }),
     )
   }
 
   async error(error: Error) {
-    await runInTraceContextPropagatedFromBaggageInMessageAttributes(
-      async () => {
-        const promises: (void | Promise<void | any>)[] = []
-        if (this.backendConfig.onProcessingError) {
-          promises.push(
-            this.backendConfig.onProcessingError({
-              message: this.message,
-              error,
-              params: this.messageConfig.decode(this.message.Body!),
-            }),
-          )
-        }
-        if (this.backendConfig.visibilityTimeoutSeconds) {
-          promises.push(
-            this.sqs.send(
-              new ChangeMessageVisibilityCommand({
-                QueueUrl: this.backendConfig.queueUrl,
-                ReceiptHandle: this.message.ReceiptHandle,
-                VisibilityTimeout: 0,
-              }),
-            ),
-          )
-        }
-        await Promise.all(promises)
-      },
-      this.message.MessageAttributes,
-    )
+    if (this.backendConfig.consumerWrapper) {
+      await this.backendConfig.consumerWrapper(this.message, () =>
+        this._error(error),
+      )
+    } else {
+      await this._error(error)
+    }
+  }
+
+  private async _error(error: Error) {
+    const promises: (void | Promise<void | any>)[] = []
+    if (this.backendConfig.onProcessingError) {
+      promises.push(
+        this.backendConfig.onProcessingError({
+          message: this.message,
+          error,
+          params: this.messageConfig.decode(this.message.Body!),
+        }),
+      )
+    }
+    if (this.backendConfig.visibilityTimeoutSeconds) {
+      promises.push(
+        this.sqs.send(
+          new ChangeMessageVisibilityCommand({
+            QueueUrl: this.backendConfig.queueUrl,
+            ReceiptHandle: this.message.ReceiptHandle,
+            VisibilityTimeout: 0,
+          }),
+        ),
+      )
+    }
+    await Promise.all(promises)
   }
 }
 
@@ -156,11 +158,13 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
         this.createSendMessageCommandInput = (params: P) => ({
           MessageBody: this.messageConfig.encode(params),
           QueueUrl: this.backendConfig.queueUrl,
-          MessageAttributes: getTraceAsMessageAttributes(),
           MessageDeduplicationId: this.backendConfig.createDeduplicationId?.(
             ...params,
           ),
           MessageGroupId: this.backendConfig.createGroupId!(...params),
+          MessageAttributes: this.backendConfig.createMessageAttributes?.(
+            ...params,
+          ),
         })
       } else {
         throw new Error('FIFO queue requires createGroupId.')
@@ -169,34 +173,16 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       this.createSendMessageCommandInput = (params: P) => ({
         MessageBody: this.messageConfig.encode(params),
         QueueUrl: this.backendConfig.queueUrl,
-        MessageAttributes: getTraceAsMessageAttributes(),
         DelaySeconds: this.backendConfig.delaySeconds,
+        MessageAttributes: this.backendConfig.createMessageAttributes?.(
+          ...params,
+        ),
       })
     }
   }
 
-  private async _publish(...params: P) {
+  async publish(...params: P) {
     const sendMessageCommandInput = this.createSendMessageCommandInput(params)
-
-    if (this.backendConfig.createMessageAttributes) {
-      sendMessageCommandInput.MessageAttributes = Object.assign(
-        sendMessageCommandInput.MessageAttributes ?? {},
-        this.backendConfig
-          .createMessageAttributes(...params)
-          .reduce((acc, value) => {
-            const messageAttributeValue: MessageAttributeValue = {
-              DataType: value.DataType,
-            }
-            if (value.DataType === 'String' || value.DataType === undefined) {
-              messageAttributeValue.StringValue = value.Value.toString()
-            } else if (value.DataType === 'Binary') {
-              messageAttributeValue.BinaryValue = value.Value
-            }
-            acc[value.Name] = messageAttributeValue
-            return acc
-          }, {} as Record<string, MessageAttributeValue>),
-      )
-    }
 
     const output = await this.sqs.send(
       new SendMessageCommand(sendMessageCommandInput),
@@ -208,6 +194,4 @@ export class SqsProducer<P extends any[]> implements Publisher<P> {
       input: sendMessageCommandInput,
     })
   }
-
-  readonly publish = wrapInTracer(this._publish)
 }

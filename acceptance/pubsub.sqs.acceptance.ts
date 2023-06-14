@@ -1,5 +1,6 @@
 import { getConsumersFromInstance, Looper, Queue } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
+import tracer from 'dd-trace'
 
 let sqsClient: SQS
 let queueUrl: string
@@ -40,6 +41,8 @@ class Domain {
       sqsClient: self.sqsClient,
       queueUrl: self.queueUrl,
       waitTimeSeconds: 0,
+      consumerWrapper: (message, callback) =>
+        tracer.trace(self.constructor.name, callback),
     },
   }))
   async doSomething(my: string, arg: number) {

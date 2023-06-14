@@ -1,40 +1,34 @@
-type DXQueueSQSBackendMessageAttribute =
-  | {
-      Name: string
-      DataType?: 'String'
-      Value: string | number
-    }
-  | {
-      Name: string
-      DataType: 'Binary'
-      Value: Uint8Array
-    }
+import type {
+  Message,
+  SendMessageCommandInput,
+  SendMessageCommandOutput,
+  SQSClient,
+  MessageAttributeValue,
+  ReceiveMessageCommandInput,
+} from '@aws-sdk/client-sqs'
 
-export type SQSBackendConfig<
-  P extends any[],
-  Attributes extends DXQueueSQSBackendMessageAttribute[] = DXQueueSQSBackendMessageAttribute[],
-> = {
+export type SQSBackendConfig<P extends any[]> = {
   type: 'sqs'
   /**
    * The URL of the Amazon SQS queue to take action on.
-   * @type import('@aws-sdk/client-sqs').ReceiveMessageCommandInput#QueueUrl
+   * @type ReceiveMessageCommandInput#QueueUrl
    */
   queueUrl: string
 
   /**
    * The Amazon SQS client configuration to use.
    */
-  sqsClient?: import('@aws-sdk/client-sqs').SQSClient
+  sqsClient?: SQSClient
 
   /**
    * The time in seconds for which the call waits for a message to arrive in the queue before returning.
-   * @type import('@aws-sdk/client-sqs').ReceiveMessageCommandInput#WaitTimeSeconds
+   * @type ReceiveMessageCommandInput#WaitTimeSeconds
    */
   waitTimeSeconds?: number
 
   /**
    * The maximum number of messages to return. Amazon SQS never returns more messages than this value (however, fewer messages might be returned). Valid values: 1 to 10. Default: 1.
-   * @type import('@aws-sdk/client-sqs').ReceiveMessageCommandInput#MaxNumberOfMessages
+   * @type ReceiveMessageCommandInput#MaxNumberOfMessages
    */
   maxNumberOfMessages?: number
 
@@ -55,35 +49,42 @@ export type SQSBackendConfig<
   visibilityTimeoutSeconds?: number
 
   /**
-   * @type import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageAttributes
+   * @type SendMessageCommandInput#MessageAttributes
    */
-  createMessageAttributes?: (...params: P) => Attributes
+  createMessageAttributes?: (
+    ...params: P
+  ) => Record<string, MessageAttributeValue>
 
   /**
    * Used for FIFO queues, ignored for standard. The messages with same groupId have ordering guaranteed.
    * @param params the same params passed to the function wrapped in pubsub.
-   * @external import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageGroupId
+   * @external SendMessageCommandInput#MessageGroupId
    */
   createGroupId?: (...params: P) => string
 
   /**
    * Used for FIFO queues, ignored for standard. The deduplication id is used for deduplication of messages within a 5-minute period.
    * @param params the same params passed to the function wrapped in pubsub.
-   * @external import('@aws-sdk/client-sqs').SendMessageCommandInput#MessageDeduplicationId
+   * @external SendMessageCommandInput#MessageDeduplicationId
    */
   createDeduplicationId?: (...params: P) => string
 
   onMessageSent?: (args: {
     params: P
-    output: import('@aws-sdk/client-sqs').SendMessageCommandOutput
-    input: import('@aws-sdk/client-sqs').SendMessageCommandInput
+    output: SendMessageCommandOutput
+    input: SendMessageCommandInput
   }) => void | Promise<void>
 
   onProcessingError?: (args: {
     params: P
     error: Error
-    message: import('@aws-sdk/client-sqs').Message
+    message: Message
   }) => void | Promise<void>
 
   onReceiveMessageError?: (error: unknown) => void | Promise<void>
+
+  consumerWrapper?: (
+    message: Message,
+    callback: () => Promise<void>,
+  ) => Promise<void> | void
 }

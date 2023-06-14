@@ -61,6 +61,7 @@ jobs:
 
       - run: |
           npm install
+          npm run test:unit
           npm run test:acceptance
         name: Checks
 
