@@ -1,5 +1,4 @@
 import {
-  ChangeMessageVisibilityCommand,
   DeleteMessageCommand,
   Message,
   ReceiveMessageCommand,
@@ -40,8 +39,8 @@ export class SqsConsumer<P extends any[]> implements Consumer {
       const { Messages } = await this.sqs.send(
         new ReceiveMessageCommand({
           QueueUrl: this.backendConfig.queueUrl,
-          MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages ?? 10,
-          WaitTimeSeconds: this.backendConfig.waitTimeSeconds ?? 5,
+          MaxNumberOfMessages: this.backendConfig.maxNumberOfMessages,
+          WaitTimeSeconds: this.backendConfig.waitTimeSeconds,
           VisibilityTimeout: this.backendConfig.visibilityTimeoutSeconds,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
@@ -115,28 +114,11 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   }
 
   private async _error(error: Error) {
-    const promises: (void | Promise<void | any>)[] = []
-    if (this.backendConfig.onProcessingError) {
-      promises.push(
-        this.backendConfig.onProcessingError({
-          message: this.message,
-          error,
-          params: this.messageConfig.decode(this.message.Body!),
-        }),
-      )
-    }
-    if (this.backendConfig.visibilityTimeoutSeconds) {
-      promises.push(
-        this.sqs.send(
-          new ChangeMessageVisibilityCommand({
-            QueueUrl: this.backendConfig.queueUrl,
-            ReceiptHandle: this.message.ReceiptHandle,
-            VisibilityTimeout: 0,
-          }),
-        ),
-      )
-    }
-    await Promise.all(promises)
+    await this.backendConfig.onProcessingError?.({
+      message: this.message,
+      error,
+      params: this.messageConfig.decode(this.message.Body!),
+    })
   }
 }
 
