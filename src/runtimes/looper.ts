@@ -4,15 +4,9 @@ export class Looper {
   constructor(private readonly consumer: Consumer) {}
 
   async start(signal?: AbortSignal) {
-    let shouldContinue = true
-    signal?.addEventListener('abort', () => {
-      shouldContinue = false
-    })
-
-    while (shouldContinue) {
+    while (!signal?.aborted) {
       await this.consumer.consume()
     }
-
-    return { wasStopped: !shouldContinue }
+    return { wasStopped: Boolean(signal?.aborted) }
   }
 }
