@@ -19,13 +19,13 @@ export function consumeSqsMessageWithDatadogTracingActivated<T>(
   return tracer.trace(
     name,
     {
-      childOf: extractParentContext(message),
+      childOf: extractParentContextFromSqsMessage(message),
     },
     fn,
   )
 }
 
-export function extractParentContext(
+export function extractParentContextFromSqsMessage(
   message: Pick<Message, 'MessageAttributes' | 'Body'>,
 ): SpanContext | undefined {
   return (
@@ -58,10 +58,11 @@ function extractParentContextFromMessageAttributes(
     message.MessageAttributes._datadog.DataType === 'Binary' &&
     message.MessageAttributes._datadog.BinaryValue
   ) {
-    const parentSpanContext = tracer.extract(
-      'text_map',
-      JSON.parse(message.MessageAttributes._datadog.BinaryValue.toString()),
+    const baggage = JSON.parse(
+      message.MessageAttributes._datadog.BinaryValue.toString(),
     )
+    console.log({ baggage })
+    const parentSpanContext = tracer.extract('text_map', baggage)
     if (parentSpanContext) {
       return parentSpanContext
     }
@@ -114,6 +115,7 @@ function extractParentContextFromMessageSentBySNSWithRawMessageDeliveryDisabled(
         'base64',
       ).toString(),
     )
+    console.log({ baggage })
     const parentSpanContext = tracer.extract('text_map', baggage)
     if (parentSpanContext) {
       return parentSpanContext
