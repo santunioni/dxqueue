@@ -8,8 +8,12 @@ export interface BatchProcessor {
   processMessages(messages: DXQueueMessage[]): Promise<void>
 }
 
+/**
+ * Consume messages from the queue
+ * @returns the number of messages consumed
+ */
 export interface Consumer {
-  consume(): Promise<void>
+  consume(): Promise<number>
 }
 
 export interface Publisher<P extends any[]> {

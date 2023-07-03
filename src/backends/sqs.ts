@@ -34,6 +34,10 @@ export class SqsConsumer<P extends any[]> implements Consumer {
       : new StandardBatchProcessor()
   }
 
+  /**
+   * Consume messages from the queue
+   * @returns the number of messages consumed
+   */
   async consume() {
     try {
       const { Messages } = await this.sqs.send(
@@ -48,7 +52,7 @@ export class SqsConsumer<P extends any[]> implements Consumer {
       )
 
       if (!Messages) {
-        return
+        return 0
       }
 
       const messages = Messages.map(
@@ -63,11 +67,13 @@ export class SqsConsumer<P extends any[]> implements Consumer {
       )
 
       await this.batchProcessor.processMessages(messages)
+      return Messages.length
     } catch (error) {
       await (this.backendConfig.onReceiveMessageError ?? console.error)(error)
       await new Promise((resolve) =>
         setTimeout(resolve, 1000 * (this.backendConfig.waitTimeSeconds ?? 5)),
       )
+      return 0
     }
   }
 }

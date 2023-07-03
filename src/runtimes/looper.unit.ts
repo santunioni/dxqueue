@@ -8,7 +8,7 @@ async function sleep(ms: number) {
 describe('Looper', () => {
   it('should keep polling until it is stopped externally', async () => {
     const consumer: Consumer = {
-      consume: () => sleep(1),
+      consume: () => sleep(1).then(() => 1),
     }
     const looper = new Looper(consumer)
     const abortController = new AbortController()

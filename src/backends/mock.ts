@@ -14,12 +14,15 @@ export class MockConsumer<P extends any[]> implements Consumer {
   ) {}
 
   async consume() {
+    let messagesConsumed = 0
     while (this.backendConfig.queue.length > 0) {
       const msg = this.backendConfig.queue.shift()
       if (msg) {
         await this.processPayload(...this.messageConfig.decode(msg))
+        messagesConsumed++
       }
     }
+    return messagesConsumed
   }
 }
 
