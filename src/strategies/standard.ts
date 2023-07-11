@@ -13,6 +13,8 @@ export class StandardBatchProcessor implements BatchProcessor {
           await message.process()
         } catch (error) {
           await message.error(error)
+        } finally {
+          await message.finally()
         }
       }),
     )

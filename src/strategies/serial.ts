@@ -13,6 +13,8 @@ export class SerialBatchProcessor implements BatchProcessor {
           messages.slice(index).map((message) => message.error(error)),
         )
         break
+      } finally {
+        await message.finally()
       }
     }
   }

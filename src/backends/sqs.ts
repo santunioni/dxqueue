@@ -126,6 +126,23 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
       params: this.messageConfig.decode(this.message.Body!),
     })
   }
+
+  async finally() {
+    if (this.backendConfig.consumerWrapper) {
+      await this.backendConfig.consumerWrapper(this.message, () =>
+        this._finally(),
+      )
+    } else {
+      await this._finally()
+    }
+  }
+
+  private async _finally() {
+    await this.backendConfig.onProcessingFinally?.({
+      message: this.message,
+      params: this.messageConfig.decode(this.message.Body!),
+    })
+  }
 }
 
 export class SqsProducer<P extends any[]> implements Publisher<P> {

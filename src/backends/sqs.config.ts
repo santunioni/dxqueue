@@ -81,6 +81,11 @@ export type SQSBackendConfig<P extends any[]> = {
     message: Message
   }) => void | Promise<void>
 
+  onProcessingFinally?: (args: {
+    params: P
+    message: Message
+  }) => void | Promise<void>
+
   onReceiveMessageError?: (error: unknown) => void | Promise<void>
 
   consumerWrapper?: (
