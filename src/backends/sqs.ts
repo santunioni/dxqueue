@@ -110,38 +110,40 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   }
 
   async error(error: Error) {
+    this.savedError = error
+
+    const userErrorCallback = () =>
+      this.backendConfig.onProcessingError?.({
+        message: this.message,
+        error,
+        params: this.messageConfig.decode(this.message.Body!),
+      })
+
     if (this.backendConfig.consumerWrapper) {
-      await this.backendConfig.consumerWrapper(this.message, () =>
-        this._error(error),
-      )
+      await this.backendConfig.consumerWrapper(this.message, userErrorCallback)
     } else {
-      await this._error(error)
+      await userErrorCallback()
     }
   }
 
-  private async _error(error: Error) {
-    await this.backendConfig.onProcessingError?.({
-      message: this.message,
-      error,
-      params: this.messageConfig.decode(this.message.Body!),
-    })
-  }
+  private savedError: Error | null = null
 
   async finally() {
+    const userFinallyCallback = () =>
+      this.backendConfig.onProcessingFinally?.({
+        message: this.message,
+        error: this.savedError,
+        params: this.messageConfig.decode(this.message.Body!),
+      })
+
     if (this.backendConfig.consumerWrapper) {
-      await this.backendConfig.consumerWrapper(this.message, () =>
-        this._finally(),
+      await this.backendConfig.consumerWrapper(
+        this.message,
+        userFinallyCallback,
       )
     } else {
-      await this._finally()
+      await userFinallyCallback()
     }
-  }
-
-  private async _finally() {
-    await this.backendConfig.onProcessingFinally?.({
-      message: this.message,
-      params: this.messageConfig.decode(this.message.Body!),
-    })
   }
 }
 

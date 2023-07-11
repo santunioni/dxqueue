@@ -83,6 +83,7 @@ export type SQSBackendConfig<P extends any[]> = {
 
   onProcessingFinally?: (args: {
     params: P
+    error: Error | null
     message: Message
   }) => void | Promise<void>
 
