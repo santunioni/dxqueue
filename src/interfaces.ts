@@ -2,7 +2,6 @@ export interface DXQueueMessage {
   readonly groupId?: string
   error(error: unknown): Promise<void>
   process(): Promise<void>
-  finally(): Promise<void>
 }
 
 export interface BatchProcessor {

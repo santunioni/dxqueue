@@ -11,19 +11,16 @@ describe('StandardStrategy', () => {
         }),
         error: jest.fn(),
         groupId: '1',
-        finally: jest.fn(),
       },
       {
         process: jest.fn(),
         error: jest.fn(),
         groupId: '2',
-        finally: jest.fn(),
       },
       {
         process: jest.fn(),
         error: jest.fn(),
         groupId: '1',
-        finally: jest.fn(),
       },
     ]
 

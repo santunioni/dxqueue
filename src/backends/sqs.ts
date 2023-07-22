@@ -110,40 +110,21 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   }
 
   async error(error: Error) {
-    this.savedError = error
-
-    const userErrorCallback = () =>
-      this.backendConfig.onProcessingError?.({
-        message: this.message,
-        error,
-        params: this.messageConfig.decode(this.message.Body!),
-      })
-
     if (this.backendConfig.consumerWrapper) {
-      await this.backendConfig.consumerWrapper(this.message, userErrorCallback)
+      await this.backendConfig.consumerWrapper(this.message, () =>
+        this._error(error),
+      )
     } else {
-      await userErrorCallback()
+      await this._error(error)
     }
   }
 
-  private savedError: Error | null = null
-
-  async finally() {
-    const userFinallyCallback = () =>
-      this.backendConfig.onProcessingFinally?.({
-        message: this.message,
-        error: this.savedError,
-        params: this.messageConfig.decode(this.message.Body!),
-      })
-
-    if (this.backendConfig.consumerWrapper) {
-      await this.backendConfig.consumerWrapper(
-        this.message,
-        userFinallyCallback,
-      )
-    } else {
-      await userFinallyCallback()
-    }
+  private async _error(error: Error) {
+    await this.backendConfig.onProcessingError?.({
+      message: this.message,
+      error,
+      params: this.messageConfig.decode(this.message.Body!),
+    })
   }
 }
 
