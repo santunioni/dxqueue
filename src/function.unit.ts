@@ -17,7 +17,7 @@ describe('wrapped function performIntensiveWork', () => {
     performIntensiveWork = jest.fn()
     ;({ wrapped, consumer } = wrapFunctionInQueue(performIntensiveWork, {
       backend: {
-        type: 'mock',
+        type: 'array',
         queue: [],
       },
     }))

@@ -11,7 +11,7 @@ class Domain {
 
   @Queue<Domain, 'doSomething'>(() => ({
     backend: {
-      type: 'mock',
+      type: 'array',
       queue: [],
     },
   }))
@@ -21,7 +21,7 @@ class Domain {
 
   @Queue<Domain, 'doNothing'>(() => ({
     backend: {
-      type: 'mock',
+      type: 'array',
       queue: [],
     },
   }))

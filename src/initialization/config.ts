@@ -1,4 +1,4 @@
-import { MockBackendConfig } from '../backends/mock'
+import { MockBackendConfig } from '../backends/array'
 import { SQSBackendConfig } from '../backends/sqs.config'
 
 export type MessageConfig<P extends any[]> = {

@@ -12,9 +12,9 @@ export function createConsumer<P extends any[]>(
     return new SqsConsumer(func, messageConfig, config.backend)
   }
 
-  if (config.backend.type === 'mock') {
-    const { MockConsumer } = require('../backends/mock')
-    return new MockConsumer(func, messageConfig, config.backend)
+  if (config.backend.type === 'array') {
+    const { ArrayPollerConsumer } = require('../backends/array')
+    return new ArrayPollerConsumer(func, messageConfig, config.backend)
   }
 
   throw new Error('Invalid backend type')
@@ -30,9 +30,9 @@ export function createProducer<P extends any[]>(
     return new SqsProducer(messageConfig, config.backend)
   }
 
-  if (config.backend.type === 'mock') {
-    const { MockProducer } = require('../backends/mock')
-    return new MockProducer(messageConfig, config.backend)
+  if (config.backend.type === 'array') {
+    const { ArrayPusherProducer } = require('../backends/array')
+    return new ArrayPusherProducer(messageConfig, config.backend)
   }
 
   throw new Error('Invalid backend type')

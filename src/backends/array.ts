@@ -2,11 +2,15 @@ import { Consumer, Publisher } from '../interfaces'
 import { Fn, MessageConfig } from '../initialization/config'
 
 export type MockBackendConfig<P extends any[]> = {
-  type: 'mock'
+  type: 'array'
   queue: string[]
 }
 
-export class MockConsumer<P extends any[]> implements Consumer {
+/**
+ * This consumer is used for testing purposes only.
+ * Don't use in production.
+ */
+export class ArrayPollerConsumer<P extends any[]> implements Consumer {
   constructor(
     private readonly processPayload: Fn<P>,
     private readonly messageConfig: MessageConfig<P>,
@@ -26,7 +30,11 @@ export class MockConsumer<P extends any[]> implements Consumer {
   }
 }
 
-export class MockProducer<P extends any[]> implements Publisher<P> {
+/**
+ * This consumer is used for testing purposes only.
+ * Don't use in production.
+ */
+export class ArrayPusherProducer<P extends any[]> implements Publisher<P> {
   constructor(
     private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: MockBackendConfig<P>,
