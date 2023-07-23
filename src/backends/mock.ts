@@ -18,8 +18,13 @@ export class MockedPublisher<P extends unknown[]> implements Publisher<P> {
   }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export class MockedConsumer implements Consumer {
   async consume(): Promise<number> {
-    throw new Error('Should not be called')
+    await sleep(10)
+    return 0
   }
 }
