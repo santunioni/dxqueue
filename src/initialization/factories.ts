@@ -23,6 +23,7 @@ export function createConsumer<P extends unknown[]>(
   }
 
   if (config.backend.type === 'sqs') {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { SqsConsumer } = require('../backends/sqs')
     return new SqsConsumer(func, messageConfig, config.backend)
   }
@@ -45,6 +46,7 @@ export function createProducer<P extends unknown[]>(
   }
 
   if (config.backend.type === 'sqs') {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { SqsProducer } = require('../backends/sqs')
     return new SqsProducer(messageConfig, config.backend)
   }
