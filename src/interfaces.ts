@@ -16,6 +16,6 @@ export interface Consumer {
   consume(): Promise<number>
 }
 
-export interface Publisher<P extends any[]> {
+export interface Publisher<P extends unknown[]> {
   publish(...params: P): Promise<void>
 }

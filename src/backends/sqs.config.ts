@@ -7,7 +7,7 @@ import type {
   ReceiveMessageCommandInput,
 } from '@aws-sdk/client-sqs'
 
-export type SQSBackendConfig<P extends any[]> = {
+export type SQSBackendConfig<P extends unknown[]> = {
   type: 'sqs'
   /**
    * The URL of the Amazon SQS queue to take action on.

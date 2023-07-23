@@ -5,7 +5,7 @@ import { Consumer, Publisher } from '../interfaces'
  * This producer is used for testing purposes only.
  * Don't use in production.
  */
-export class MockedPublisher<P extends any[]> implements Publisher<P> {
+export class MockedPublisher<P extends unknown[]> implements Publisher<P> {
   constructor(
     private readonly processPayload: Fn<P>,
     private readonly messageConfig: MessageConfig<P>,

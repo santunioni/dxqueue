@@ -8,7 +8,7 @@ import { createConsumer, createProducer } from './initialization/factories'
  * @param func the function to wrap
  * @param config the configuration for the queue
  */
-export function wrapFunctionInQueue<P extends any[]>(
+export function wrapFunctionInQueue<P extends unknown[]>(
   func: Fn<P>,
   config: Config<P>,
 ) {

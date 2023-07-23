@@ -12,7 +12,7 @@ function shouldByPassQueueBackendBecauseEnvVar() {
   )
 }
 
-export function createConsumer<P extends any[]>(
+export function createConsumer<P extends unknown[]>(
   func: Fn<P>,
   config: Config<P>,
 ): Consumer {
@@ -34,7 +34,7 @@ export function createConsumer<P extends any[]>(
   throw new Error('Invalid backend type')
 }
 
-export function createProducer<P extends any[]>(
+export function createProducer<P extends unknown[]>(
   func: Fn<P>,
   config: Config<P>,
 ): Publisher<P> {

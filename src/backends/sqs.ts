@@ -17,7 +17,7 @@ import {
 import { SQSBackendConfig } from './sqs.config'
 import { Fn, MessageConfig } from '../initialization/config'
 
-export class SqsConsumer<P extends any[]> implements Consumer {
+export class SqsConsumer<P extends unknown[]> implements Consumer {
   private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
 
   private readonly isFifo: boolean
@@ -78,7 +78,7 @@ export class SqsConsumer<P extends any[]> implements Consumer {
   }
 }
 
-class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
+class DXQueueMessageSQSWrapper<P extends unknown[]> implements DXQueueMessage {
   readonly groupId = this.message.Attributes?.MessageGroupId
 
   constructor(
@@ -128,7 +128,7 @@ class DXQueueMessageSQSWrapper<P extends any[]> implements DXQueueMessage {
   }
 }
 
-export class SqsProducer<P extends any[]> implements Publisher<P> {
+export class SqsProducer<P extends unknown[]> implements Publisher<P> {
   private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
 
   private readonly createSendMessageCommandInput: (

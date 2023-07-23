@@ -1,7 +1,7 @@
 import { Consumer, Publisher } from '../interfaces'
 import { Fn, MessageConfig } from '../initialization/config'
 
-export type ArrayBackendConfig<P extends any[]> = {
+export type ArrayBackendConfig<P extends unknown[]> = {
   type: 'array'
   queue: string[]
 }
@@ -10,7 +10,7 @@ export type ArrayBackendConfig<P extends any[]> = {
  * This consumer is used for testing purposes only.
  * Don't use in production.
  */
-export class ArrayPollerConsumer<P extends any[]> implements Consumer {
+export class ArrayPollerConsumer<P extends unknown[]> implements Consumer {
   constructor(
     private readonly processPayload: Fn<P>,
     private readonly messageConfig: MessageConfig<P>,
@@ -34,7 +34,7 @@ export class ArrayPollerConsumer<P extends any[]> implements Consumer {
  * This consumer is used for testing purposes only.
  * Don't use in production.
  */
-export class ArrayPusherProducer<P extends any[]> implements Publisher<P> {
+export class ArrayPusherProducer<P extends unknown[]> implements Publisher<P> {
   constructor(
     private readonly messageConfig: MessageConfig<P>,
     private readonly backendConfig: ArrayBackendConfig<P>,

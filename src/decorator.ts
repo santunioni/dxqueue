@@ -34,7 +34,7 @@ function memoizeeSingleArgument<I, R>(func: (i: I) => R) {
   }
 }
 
-type ConfigFactory<T extends Object, P extends any[]> = (
+type ConfigFactory<T extends Object, P extends unknown[]> = (
   instance: T,
 ) => Config<P>
 
