@@ -36,14 +36,12 @@ function memoizeeSingleArgument<I, R>(
   }
 }
 
-type ConfigFactory<T extends object, P extends unknown[]> = (
-  instance: T,
-) => Config<P>
+type ConfigFactory<T, P extends unknown[]> = (instance: T) => Config<P>
 
 type DecoratedClassMethod<
   DecoratedClass extends object,
   DecoratedMethodKey extends keyof DecoratedClass & string,
-> = DecoratedClass[DecoratedMethodKey] extends Fn<any[]>
+> = DecoratedClass[DecoratedMethodKey] extends Fn<unknown[]>
   ? DecoratedClass[DecoratedMethodKey]
   : never
 
@@ -57,7 +55,8 @@ const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
   Map<
     string,
     {
-      value: any
+      value: Fn<unknown[]>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       configFactory: ConfigFactory<any, any>
     }
   >
@@ -94,7 +93,7 @@ export function Queue<
       get() {
         const config = cachedConfigFactory(this as unknown as DecoratedClass)
         const producer = createProducer(descriptor.value.bind(this), config)
-        const publisher = (...args: any) => producer.publish(...args)
+        const publisher = producer.publish.bind(producer)
 
         Object.defineProperty(this, methodName, {
           value: publisher,
@@ -110,7 +109,7 @@ export function Queue<
 }
 
 const METHOD_CONSUMERS_BY_INSTANCE = new DefaultWeakMap<
-  any,
+  object,
   Map<string, Consumer>
 >(() => new Map())
 
@@ -150,8 +149,15 @@ export function getConsumerFromInstanceMethod<
  * Returns an array of consumers for all methods decorated with @Queue() on the given instance.
  * @param instance
  */
-export function getConsumersFromInstance(instance: any): Consumer[] {
+export function getConsumersFromInstance<DecoratedClass extends object>(
+  instance: DecoratedClass,
+): Consumer[] {
   return Array.from(
     ORIGINAL_CLASS_DESCRIPTORS.get(instance.constructor.prototype).keys(),
-  ).map((method) => getConsumerFromInstanceMethod(instance, method))
+  ).map((method) =>
+    getConsumerFromInstanceMethod(
+      instance,
+      method as DecoratedClass[keyof DecoratedClass],
+    ),
+  )
 }
