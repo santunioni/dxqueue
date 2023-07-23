@@ -14,6 +14,7 @@ export class DomainExampleClass {
       sqsClient: self.sqsClient,
       queueUrl: self.queueUrl,
       waitTimeSeconds: 0,
+      createGroupId: (my, arg) => `${my}-${arg}`,
     },
   }))
   async doSomething(my: string, arg: number) {
