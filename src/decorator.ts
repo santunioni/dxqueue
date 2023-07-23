@@ -91,7 +91,7 @@ export function Queue<
 
     return {
       get() {
-        const config = cachedConfigFactory(this as unknown as DecoratedClass)
+        const config = cachedConfigFactory(this as DecoratedClass)
         const producer = createProducer(descriptor.value.bind(this), config)
         const publisher = producer.publish.bind(producer)
 
