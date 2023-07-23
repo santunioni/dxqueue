@@ -4,7 +4,7 @@ import * as process from 'process'
 import { MockedConsumer, MockedPublisher } from '../backends/mock'
 import { ArrayPollerConsumer, ArrayPusherProducer } from '../backends/array'
 
-function shouldByPassQueueBackendBecauseEnvVar() {
+function shouldBypassQueueBackendBecauseConfiguredEnvironmentVariable() {
   return (
     process.env.DXQUEUE_BYPASS_QUEUE_BACKEND &&
     process.env.DXQUEUE_BYPASS_QUEUE_BACKEND !== 'false' &&
@@ -18,7 +18,7 @@ export function createConsumer<P extends unknown[]>(
 ): Consumer {
   const messageConfig = parseMessageConfig(config.message ?? {})
 
-  if (shouldByPassQueueBackendBecauseEnvVar()) {
+  if (shouldBypassQueueBackendBecauseConfiguredEnvironmentVariable()) {
     return new MockedConsumer()
   }
 
@@ -41,7 +41,7 @@ export function createProducer<P extends unknown[]>(
 ): Publisher<P> {
   const messageConfig = parseMessageConfig(config.message ?? {})
 
-  if (shouldByPassQueueBackendBecauseEnvVar()) {
+  if (shouldBypassQueueBackendBecauseConfiguredEnvironmentVariable()) {
     return new MockedPublisher(func, messageConfig)
   }
 
