@@ -19,7 +19,11 @@
     "noImplicitReturns": true,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true
+    "declaration": true,
+    "alwaysStrict": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true
   },
   "exclude": [
     "node_modules",

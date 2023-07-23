@@ -1,6 +1,6 @@
 {
   "name": "dxqueue",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Improve developer experience using the remote command pattern",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
