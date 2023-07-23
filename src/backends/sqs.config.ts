@@ -1,10 +1,12 @@
-import type {
-  Message,
-  SendMessageCommandInput,
-  SendMessageCommandOutput,
-  SQSClient,
-  MessageAttributeValue,
-} from '@aws-sdk/client-sqs'
+const SQSModuleFactory = () => require('@aws-sdk/client-sqs')
+type LazySQSModule = ReturnType<typeof SQSModuleFactory>
+
+type Message = LazySQSModule['Message']
+type SendMessageCommandInput = LazySQSModule['SendMessageCommandInput']
+type SendMessageCommandOutput = LazySQSModule['SendMessageCommandOutput']
+type MessageAttributeValue = LazySQSModule['MessageAttributeValue']
+
+type SQSClient = LazySQSModule['SQSClient']
 
 export type SQSBackendConfig<P extends unknown[]> = {
   type: 'sqs'
