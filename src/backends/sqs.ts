@@ -38,7 +38,7 @@ export class SqsConsumer<P extends unknown[]> implements Consumer {
    * Consume messages from the queue
    * @returns the number of messages consumed
    */
-  async consume() {
+  async consume(): Promise<void> {
     try {
       const { Messages } = await this.sqs.send(
         new ReceiveMessageCommand({
@@ -52,7 +52,7 @@ export class SqsConsumer<P extends unknown[]> implements Consumer {
       )
 
       if (!Messages) {
-        return 0
+        return
       }
 
       const messages = Messages.map(
@@ -67,13 +67,11 @@ export class SqsConsumer<P extends unknown[]> implements Consumer {
       )
 
       await this.batchProcessor.processMessages(messages)
-      return Messages.length
     } catch (error) {
       await (this.backendConfig.onReceiveMessageError ?? console.error)(error)
       await new Promise((resolve) =>
         setTimeout(resolve, 1000 * (this.backendConfig.waitTimeSeconds ?? 5)),
       )
-      return 0
     }
   }
 }

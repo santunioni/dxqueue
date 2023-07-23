@@ -23,8 +23,7 @@ function sleep(ms: number) {
 }
 
 export class MockedConsumer implements Consumer {
-  async consume(): Promise<number> {
+  async consume() {
     await sleep(10)
-    return 0
   }
 }

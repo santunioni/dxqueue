@@ -13,7 +13,7 @@ export interface BatchProcessor {
  * @returns the number of messages consumed
  */
 export interface Consumer {
-  consume(): Promise<number>
+  consume(): Promise<void>
 }
 
 export interface Publisher<P extends unknown[]> {

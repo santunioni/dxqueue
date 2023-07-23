@@ -8,7 +8,7 @@ async function sleep(ms: number) {
 describe('Looper', () => {
   it('should keep polling until it is stopped externally', async () => {
     const consumer: Consumer = {
-      consume: () => sleep(1).then(() => 1),
+      consume: () => sleep(1),
     }
     const looper = new Looper(consumer)
     const abortController = new AbortController()
@@ -18,6 +18,6 @@ describe('Looper', () => {
     sleep(10).then(() => abortController.abort())
 
     // Then: subscriber stop polling only after it is stopped
-    expect(await loop).toEqual({ wasStopped: true })
+    expect(await loop).toEqual(undefined)
   })
 })

@@ -17,16 +17,13 @@ export class ArrayPollerConsumer<P extends unknown[]> implements Consumer {
     private readonly backendConfig: ArrayBackendConfig,
   ) {}
 
-  async consume() {
-    let messagesConsumed = 0
+  async consume(): Promise<void> {
     while (this.backendConfig.queue.length > 0) {
       const msg = this.backendConfig.queue.shift()
       if (msg) {
         await this.processPayload(...this.messageConfig.decode(msg))
-        messagesConsumed++
       }
     }
-    return messagesConsumed
   }
 }
 
