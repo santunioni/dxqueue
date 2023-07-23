@@ -16,7 +16,7 @@ export type MessageConfig<P extends unknown[]> = {
 
 export type Config<P extends unknown[]> = {
   message?: MessageConfig<P>
-  backend: SQSBackendConfig<P> | ArrayBackendConfig<P>
+  backend: SQSBackendConfig<P> | ArrayBackendConfig
 }
 
 export type Fn<P extends unknown[]> = (...params: P) => void | Promise<void>

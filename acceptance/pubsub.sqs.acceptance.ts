@@ -1,4 +1,4 @@
-import { getConsumersFromInstance, Looper, Queue } from '../dist'
+import { getConsumersFromInstance, Looper } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
 import { DomainExampleClass } from './fixtures'
 

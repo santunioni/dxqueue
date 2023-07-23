@@ -4,14 +4,12 @@ import type {
   SendMessageCommandOutput,
   SQSClient,
   MessageAttributeValue,
-  ReceiveMessageCommandInput,
 } from '@aws-sdk/client-sqs'
 
 export type SQSBackendConfig<P extends unknown[]> = {
   type: 'sqs'
   /**
    * The URL of the Amazon SQS queue to take action on.
-   * @type ReceiveMessageCommandInput#QueueUrl
    */
   queueUrl: string
 
@@ -22,13 +20,11 @@ export type SQSBackendConfig<P extends unknown[]> = {
 
   /**
    * The time in seconds for which the call waits for a message to arrive in the queue before returning.
-   * @type ReceiveMessageCommandInput#WaitTimeSeconds
    */
   waitTimeSeconds?: number
 
   /**
    * The maximum number of messages to return. Amazon SQS never returns more messages than this value (however, fewer messages might be returned). Valid values: 1 to 10. Default: 1.
-   * @type ReceiveMessageCommandInput#MaxNumberOfMessages
    */
   maxNumberOfMessages?: number
 

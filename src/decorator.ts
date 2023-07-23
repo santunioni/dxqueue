@@ -5,7 +5,7 @@ import { Consumer } from './interfaces'
 /**
  * A WeakMap that returns a default value when the key is not found.
  */
-class DefaultWeakMap<K extends Object, V> extends WeakMap<K, V> {
+class DefaultWeakMap<K extends object, V> extends WeakMap<K, V> {
   constructor(private readonly defaultFactory: () => V) {
     super()
   }
@@ -34,17 +34,17 @@ function memoizeeSingleArgument<I, R>(func: (i: I) => R) {
   }
 }
 
-type ConfigFactory<T extends Object, P extends unknown[]> = (
+type ConfigFactory<T extends object, P extends unknown[]> = (
   instance: T,
 ) => Config<P>
 
 type QueueDecoratorParams<
-  T extends Object,
+  T extends object,
   K extends keyof T & string,
 > = Parameters<T[K] extends Fn<any[]> ? T[K] : never>
 
 const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
-  Object,
+  object,
   Map<
     string,
     {
@@ -60,7 +60,7 @@ const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
  * @param configFactory
  */
 export function Queue<
-  T extends Object,
+  T extends object,
   K extends keyof T & string = keyof T & string,
 >(configFactory: ConfigFactory<T, QueueDecoratorParams<T, K>>) {
   return function (clsPrototype: T, methodName: K, descriptor) {
