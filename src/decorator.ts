@@ -36,12 +36,14 @@ function memoizeeSingleArgument<I, R>(
   }
 }
 
-type ConfigFactory<T, P extends unknown[]> = (instance: T) => Config<P>
+type ConfigFactory<T extends object, P extends unknown[]> = (
+  instance: T,
+) => Config<P>
 
 type DecoratedClassMethod<
   DecoratedClass extends object,
   DecoratedMethodKey extends keyof DecoratedClass & string,
-> = DecoratedClass[DecoratedMethodKey] extends Fn<unknown[]>
+> = DecoratedClass[DecoratedMethodKey] extends Fn<any[]>
   ? DecoratedClass[DecoratedMethodKey]
   : never
 
@@ -55,8 +57,7 @@ const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
   Map<
     string,
     {
-      value: Fn<unknown[]>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      value: any
       configFactory: ConfigFactory<any, any>
     }
   >
@@ -93,7 +94,7 @@ export function Queue<
       get() {
         const config = cachedConfigFactory(this as DecoratedClass)
         const producer = createProducer(descriptor.value.bind(this), config)
-        const publisher = producer.publish.bind(producer)
+        const publisher = (...args: any) => producer.publish(...args)
 
         Object.defineProperty(this, methodName, {
           value: publisher,
@@ -109,7 +110,7 @@ export function Queue<
 }
 
 const METHOD_CONSUMERS_BY_INSTANCE = new DefaultWeakMap<
-  object,
+  any,
   Map<string, Consumer>
 >(() => new Map())
 
@@ -149,15 +150,8 @@ export function getConsumerFromInstanceMethod<
  * Returns an array of consumers for all methods decorated with @Queue() on the given instance.
  * @param instance
  */
-export function getConsumersFromInstance<DecoratedClass extends object>(
-  instance: DecoratedClass,
-): Consumer[] {
+export function getConsumersFromInstance(instance: any): Consumer[] {
   return Array.from(
     ORIGINAL_CLASS_DESCRIPTORS.get(instance.constructor.prototype).keys(),
-  ).map((method) =>
-    getConsumerFromInstanceMethod(
-      instance,
-      method as DecoratedClass[keyof DecoratedClass],
-    ),
-  )
+  ).map((method) => getConsumerFromInstanceMethod(instance, method))
 }
