@@ -1,7 +1,7 @@
 import { Consumer, Publisher } from '../interfaces'
 import { Fn, MessageConfig } from '../initialization/config'
 
-export type MockBackendConfig<P extends any[]> = {
+export type ArrayBackendConfig<P extends any[]> = {
   type: 'array'
   queue: string[]
 }
@@ -14,7 +14,7 @@ export class ArrayPollerConsumer<P extends any[]> implements Consumer {
   constructor(
     private readonly processPayload: Fn<P>,
     private readonly messageConfig: MessageConfig<P>,
-    private readonly backendConfig: MockBackendConfig<P>,
+    private readonly backendConfig: ArrayBackendConfig<P>,
   ) {}
 
   async consume() {
@@ -37,7 +37,7 @@ export class ArrayPollerConsumer<P extends any[]> implements Consumer {
 export class ArrayPusherProducer<P extends any[]> implements Publisher<P> {
   constructor(
     private readonly messageConfig: MessageConfig<P>,
-    private readonly backendConfig: MockBackendConfig<P>,
+    private readonly backendConfig: ArrayBackendConfig<P>,
   ) {}
 
   async publish(...params: P) {

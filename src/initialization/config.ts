@@ -1,4 +1,4 @@
-import { MockBackendConfig } from '../backends/array'
+import { ArrayBackendConfig } from '../backends/array'
 import { SQSBackendConfig } from '../backends/sqs.config'
 
 export type MessageConfig<P extends any[]> = {
@@ -16,7 +16,7 @@ export type MessageConfig<P extends any[]> = {
 
 export type Config<P extends any[]> = {
   message?: MessageConfig<P>
-  backend: SQSBackendConfig<P> | MockBackendConfig<P>
+  backend: SQSBackendConfig<P> | ArrayBackendConfig<P>
 }
 
 export type Fn<P extends any[]> = (...params: P) => void | Promise<void>

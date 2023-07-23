@@ -1,5 +1,16 @@
 import { Config, Fn, parseMessageConfig } from './config'
 import { Consumer, Publisher } from '../interfaces'
+import * as process from 'process'
+import { MockedConsumer, MockedPublisher } from '../backends/mock'
+import { ArrayPollerConsumer, ArrayPusherProducer } from '../backends/array'
+
+function shouldByPassQueueBackendBecauseEnvVar() {
+  return (
+    process.env.DXQUEUE_BYPASS_QUEUE_BACKEND &&
+    process.env.DXQUEUE_BYPASS_QUEUE_BACKEND !== 'false' &&
+    process.env.DXQUEUE_BYPASS_QUEUE_BACKEND !== '0'
+  )
+}
 
 export function createConsumer<P extends any[]>(
   func: Fn<P>,
@@ -7,13 +18,16 @@ export function createConsumer<P extends any[]>(
 ): Consumer {
   const messageConfig = parseMessageConfig(config.message ?? {})
 
+  if (shouldByPassQueueBackendBecauseEnvVar()) {
+    return new MockedConsumer()
+  }
+
   if (config.backend.type === 'sqs') {
     const { SqsConsumer } = require('../backends/sqs')
     return new SqsConsumer(func, messageConfig, config.backend)
   }
 
   if (config.backend.type === 'array') {
-    const { ArrayPollerConsumer } = require('../backends/array')
     return new ArrayPollerConsumer(func, messageConfig, config.backend)
   }
 
@@ -21,9 +35,14 @@ export function createConsumer<P extends any[]>(
 }
 
 export function createProducer<P extends any[]>(
+  func: Fn<P>,
   config: Config<P>,
 ): Publisher<P> {
   const messageConfig = parseMessageConfig(config.message ?? {})
+
+  if (shouldByPassQueueBackendBecauseEnvVar()) {
+    return new MockedPublisher(func, messageConfig)
+  }
 
   if (config.backend.type === 'sqs') {
     const { SqsProducer } = require('../backends/sqs')
@@ -31,7 +50,6 @@ export function createProducer<P extends any[]>(
   }
 
   if (config.backend.type === 'array') {
-    const { ArrayPusherProducer } = require('../backends/array')
     return new ArrayPusherProducer(messageConfig, config.backend)
   }
 

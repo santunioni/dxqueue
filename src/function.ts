@@ -12,7 +12,7 @@ export function wrapFunctionInQueue<P extends any[]>(
   func: Fn<P>,
   config: Config<P>,
 ) {
-  const producer = createProducer(config)
+  const producer = createProducer(func, config)
   const consumer = createConsumer(func, config)
   return {
     wrapped: (...args: P) => producer.publish(...args),

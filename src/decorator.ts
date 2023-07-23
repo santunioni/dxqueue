@@ -74,7 +74,7 @@ export function Queue<
     return {
       get() {
         const config = cachedConfigFactory(this as unknown as T)
-        const producer = createProducer(config)
+        const producer = createProducer(descriptor.value.bind(this), config)
         const publisher = (...args: any) => producer.publish(...args)
 
         Object.defineProperty(this, methodName, {

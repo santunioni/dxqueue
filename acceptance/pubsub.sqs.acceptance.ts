@@ -1,6 +1,6 @@
 import { getConsumersFromInstance, Looper, Queue } from '../dist'
 import { SQS } from '@aws-sdk/client-sqs'
-import tracer from 'dd-trace'
+import { DomainExampleClass } from './fixtures'
 
 let sqsClient: SQS
 let queueUrl: string
@@ -28,33 +28,15 @@ afterEach(async () => {
   })
 })
 
-class Domain {
-  constructor(
-    private readonly queueUrl: string,
-    private readonly doSomethingInnerCode: (my: string, arg: number) => void,
-    private readonly sqsClient: SQS,
-  ) {}
-
-  @Queue<Domain, 'doSomething'>((self) => ({
-    backend: {
-      type: 'sqs',
-      sqsClient: self.sqsClient,
-      queueUrl: self.queueUrl,
-      waitTimeSeconds: 0,
-      consumerWrapper: (message, callback) =>
-        tracer.trace(self.constructor.name, callback),
-    },
-  }))
-  async doSomething(my: string, arg: number) {
-    this.doSomethingInnerCode(my, arg)
-  }
-}
-
 describe('DXQueue', () => {
   it('should publish message instead of calling method', async () => {
     // Given a method decorated with @Queue
     const doSomethingInnerCode = jest.fn()
-    const domain = new Domain(queueUrl, doSomethingInnerCode, sqsClient)
+    const domain = new DomainExampleClass(
+      doSomethingInnerCode,
+      queueUrl,
+      sqsClient,
+    )
 
     // When the method is called
     await domain.doSomething('my', 1)
@@ -66,7 +48,11 @@ describe('DXQueue', () => {
   it('should call method when consumer runs', async () => {
     // Given a method decorated with @Queue is called
     const doSomethingInnerCode = jest.fn()
-    const domain = new Domain(queueUrl, doSomethingInnerCode, sqsClient)
+    const domain = new DomainExampleClass(
+      doSomethingInnerCode,
+      queueUrl,
+      sqsClient,
+    )
     await domain.doSomething('my', 2)
 
     // When the consumer runs

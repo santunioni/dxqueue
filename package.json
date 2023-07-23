@@ -19,9 +19,6 @@
   ],
   "scripts": {
     "build": "tsc",
-    "local": "npm install && prettier --write . && npm run test:unit && npm run test:acceptance",
-    "infra:up": "docker-compose up --wait -d",
-    "infra:down": "docker-compose down",
     "test:unit": "jest . --testRegex \".unit.ts$\"",
     "test:acceptance": "npm run build && jest . --testRegex \".acceptance.ts$\"",
     "prepare": "husky install",
