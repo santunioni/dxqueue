@@ -81,11 +81,14 @@ export function Queue<
   return function (
     clsPrototype: DecoratedClass,
     methodName: DecoratedMethodKey,
-    descriptor: TypedPropertyDescriptor<
-      DecoratedClassMethod<DecoratedClass, DecoratedMethodKey>
-    >,
   ) {
     const cachedConfigFactory = memoizeeSingleArgument(configFactory)
+
+    const descriptor = Object.getOwnPropertyDescriptor(clsPrototype, methodName)
+
+    if (!descriptor) {
+      throw new Error(`No descriptor found for method ${methodName}`)
+    }
 
     ORIGINAL_CLASS_DESCRIPTORS.get(clsPrototype).set(methodName, {
       value: descriptor.value,
