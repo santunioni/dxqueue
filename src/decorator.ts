@@ -41,16 +41,14 @@ type ConfigFactory<T extends object, P extends unknown[]> = (
 ) => Config<P>
 
 type DecoratedClassMethod<
-  DecoratedClass extends object,
-  DecoratedMethodKey extends keyof DecoratedClass & string,
-> = DecoratedClass[DecoratedMethodKey] extends Fn<any[]>
-  ? DecoratedClass[DecoratedMethodKey]
-  : never
+  T extends object,
+  K extends keyof T & string,
+> = T[K] extends Fn<any[]> ? T[K] : never
 
 type QueueDecoratorParams<
-  DecoratedClass extends object,
-  DecoratedMethodKey extends keyof DecoratedClass & string,
-> = Parameters<DecoratedClassMethod<DecoratedClass, DecoratedMethodKey>>
+  T extends object,
+  K extends keyof T & string,
+> = Parameters<DecoratedClassMethod<T, K>>
 
 const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
   object,
@@ -69,19 +67,10 @@ const ORIGINAL_CLASS_DESCRIPTORS = new DefaultWeakMap<
  * @param configFactory
  */
 export function Queue<
-  DecoratedClass extends object,
-  DecoratedMethodKey extends keyof DecoratedClass &
-    string = keyof DecoratedClass & string,
->(
-  configFactory: ConfigFactory<
-    DecoratedClass,
-    QueueDecoratorParams<DecoratedClass, DecoratedMethodKey>
-  >,
-) {
-  return function (
-    clsPrototype: DecoratedClass,
-    methodName: DecoratedMethodKey,
-  ) {
+  T extends object,
+  K extends keyof T & string = keyof T & string,
+>(configFactory: ConfigFactory<T, QueueDecoratorParams<T, K>>) {
+  return function (clsPrototype: T, methodName: K) {
     const cachedConfigFactory = memoizeeSingleArgument(configFactory)
 
     const descriptor = Object.getOwnPropertyDescriptor(clsPrototype, methodName)
@@ -97,7 +86,7 @@ export function Queue<
 
     return {
       get() {
-        const config = cachedConfigFactory(this as unknown as DecoratedClass)
+        const config = cachedConfigFactory(this as unknown as T)
         const producer = createProducer(descriptor.value?.bind(this), config)
         const publisher = (...args: any) => producer.publish(...args)
 
@@ -125,10 +114,9 @@ const METHOD_CONSUMERS_BY_INSTANCE = new DefaultWeakMap<
  * @param method
  */
 export function getConsumerFromInstanceMethod<
-  ConsumerInstanceType extends object,
-  ConsumerInstanceMethod extends keyof ConsumerInstanceType &
-    string = keyof ConsumerInstanceType & string,
->(instance: ConsumerInstanceType, method: ConsumerInstanceMethod): Consumer {
+  T extends object,
+  K extends keyof T & string = keyof T & string,
+>(instance: T, method: K): Consumer {
   let consumer = METHOD_CONSUMERS_BY_INSTANCE.get(instance).get(method)
 
   if (!consumer) {
