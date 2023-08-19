@@ -16,6 +16,7 @@ import {
 } from '../interfaces'
 import { SQSBackendConfig } from './sqs.config'
 import { Fn, MessageConfig } from '../initialization/config'
+import { ConfigurationError } from '../initialization/exception'
 
 export class SqsConsumer<P extends unknown[]> implements Consumer {
   private readonly sqs = this.backendConfig.sqsClient ?? new SQSClient({})
@@ -140,21 +141,29 @@ export class SqsProducer<P extends unknown[]> implements Publisher<P> {
     const isFifo = backendConfig.queueUrl.endsWith('.fifo')
 
     if (isFifo) {
-      if (this.backendConfig.createGroupId) {
-        this.createSendMessageCommandInput = (params: P) => ({
-          MessageBody: this.messageConfig.encode(params),
-          QueueUrl: this.backendConfig.queueUrl,
-          MessageDeduplicationId: this.backendConfig.createDeduplicationId?.(
-            ...params,
-          ),
-          MessageGroupId: this.backendConfig.createGroupId!(...params),
-          MessageAttributes: this.backendConfig.createMessageAttributes?.(
-            ...params,
-          ),
-        })
-      } else {
-        throw new Error('FIFO queue requires createGroupId.')
+      const createGroupId = backendConfig.createGroupId
+
+      if (!createGroupId) {
+        throw new ConfigurationError('SQS fifo queue requires createGroupId.')
       }
+
+      if (this.backendConfig.delaySeconds) {
+        throw new ConfigurationError(
+          'SQS fifo queue does not support per-message delaySeconds.',
+        )
+      }
+
+      this.createSendMessageCommandInput = (params: P) => ({
+        MessageBody: this.messageConfig.encode(params),
+        QueueUrl: this.backendConfig.queueUrl,
+        MessageDeduplicationId: this.backendConfig.createDeduplicationId?.(
+          ...params,
+        ),
+        MessageGroupId: createGroupId(...params),
+        MessageAttributes: this.backendConfig.createMessageAttributes?.(
+          ...params,
+        ),
+      })
     } else {
       this.createSendMessageCommandInput = (params: P) => ({
         MessageBody: this.messageConfig.encode(params),
