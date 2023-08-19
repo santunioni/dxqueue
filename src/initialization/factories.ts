@@ -3,6 +3,7 @@ import { Consumer, Publisher } from '../interfaces'
 import * as process from 'process'
 import { MockedConsumer, MockedPublisher } from '../backends/mock'
 import { ArrayPollerConsumer, ArrayPusherProducer } from '../backends/array'
+import { ConfigurationError } from './exception'
 
 function shouldBypassQueueBackendBecauseConfiguredEnvironmentVariable() {
   return (
@@ -32,7 +33,7 @@ export function createConsumer<P extends unknown[]>(
     return new ArrayPollerConsumer(func, messageConfig, config.backend)
   }
 
-  throw new Error('Invalid backend type')
+  throw new ConfigurationError('Invalid backend type')
 }
 
 export function createProducer<P extends unknown[]>(
@@ -55,5 +56,5 @@ export function createProducer<P extends unknown[]>(
     return new ArrayPusherProducer(messageConfig, config.backend)
   }
 
-  throw new Error('Invalid backend type')
+  throw new ConfigurationError('Invalid backend type')
 }

@@ -1,6 +1,7 @@
 import { Config, Fn } from './initialization/config'
 import { createConsumer, createProducer } from './initialization/factories'
 import { Consumer } from './interfaces'
+import { ConfigurationError } from './initialization/exception'
 
 /**
  * A WeakMap that returns a default value when the key is not found.
@@ -76,7 +77,9 @@ export function Queue<
     const descriptor = Object.getOwnPropertyDescriptor(clsPrototype, methodName)
 
     if (!descriptor) {
-      throw new Error(`No descriptor found for method ${methodName}`)
+      throw new ConfigurationError(
+        `No descriptor found for method ${methodName}`,
+      )
     }
 
     ORIGINAL_CLASS_DESCRIPTORS.get(clsPrototype).set(methodName, {
@@ -125,7 +128,7 @@ export function getConsumerFromInstanceMethod<
     ).get(method)
 
     if (!descriptor) {
-      throw new Error(`No subscriber found for method ${method}`)
+      throw new ConfigurationError(`No subscriber found for method ${method}`)
     }
 
     consumer = createConsumer(
